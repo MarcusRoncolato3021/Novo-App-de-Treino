@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Esconder scrollbar para Chrome, Safari e Opera */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Esconder scrollbar para IE, Edge e Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE e Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Ajustes para cores dinâmicas */
+.bg-red-100 { background-color: #fee2e2; }
+.bg-blue-100 { background-color: #dbeafe; }
+.bg-purple-100 { background-color: #ede9fe; }
+.bg-green-100 { background-color: #dcfce7; }
+.bg-yellow-100 { background-color: #fef9c3; }
+
+.text-red-600 { color: #dc2626; }
+.text-blue-600 { color: #2563eb; }
+.text-purple-600 { color: #9333ea; }
+.text-green-600 { color: #16a34a; }
+.text-yellow-600 { color: #ca8a04; }
+
+/* Ajustes para o container principal */
+body {
+  @apply antialiased;
+  -webkit-tap-highlight-color: transparent;
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-start-rgb));
+}
+
+/* Ajustes para botões */
+button {
+  @apply select-none;
+}
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+} 
