@@ -241,41 +241,31 @@ export default function TreinoPage() {
   }
 
   return (
-    <main className="container mx-auto p-6 max-w-7xl">
+    <main className="container mx-auto p-4 max-w-7xl">
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between mb-8 bg-white p-6 rounded-xl shadow-sm">
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">{treino.nome}</h1>
-          <p className="text-xl text-gray-600">{diasDaSemana[treino.diaDaSemana]}</p>
+      <div className="flex items-center justify-between mb-4 bg-white p-3 rounded-lg shadow-sm">
+        <Link href="/" className="text-blue-600 hover:text-blue-800 p-2 rounded-full hover:bg-blue-50 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+          </svg>
+        </Link>
+        <div className="flex-1 text-center">
+          <h1 className="text-2xl font-bold text-gray-900">{treino.nome}</h1>
+          <p className="text-sm text-gray-600 mt-1">{diasDaSemana[treino.diaDaSemana]}</p>
         </div>
-        <div className="flex items-center space-x-6">
-          <button
-            onClick={() => setMostrarInstrucoes(!mostrarInstrucoes)}
-            className="flex items-center px-4 py-2 text-lg font-medium text-blue-600 hover:text-blue-800 transition-colors duration-200"
-          >
+        <button
+          onClick={() => setMostrarInstrucoes(!mostrarInstrucoes)}
+          className="text-blue-600 hover:text-blue-800 p-2 rounded-full hover:bg-blue-50 transition-colors"
+          title={mostrarInstrucoes ? "Ocultar Instruções" : "Ver Instruções"}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
             {mostrarInstrucoes ? (
-              <>
-                <span>Ocultar Instruções</span>
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             ) : (
-              <>
-                <span>Ver Instruções</span>
-                <svg className="w-5 h-5 ml-2 transform -rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
             )}
-          </button>
-          <button
-            onClick={() => router.push('/')}
-            className="px-6 py-2 text-lg font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors duration-200"
-          >
-            Voltar
-          </button>
-        </div>
+          </svg>
+        </button>
       </div>
 
       {/* Instruções */}
