@@ -508,16 +508,28 @@ export default function TreinoPage() {
                                 <span className="text-sm text-gray-500">reps</span>
                               </div>
                             )}
-                            {historicoSemanaAnterior[exercicioId]?.[serie.ordem] && (
-                              <div className="flex items-center space-x-1 text-xs bg-blue-50 px-2 py-1 rounded-md">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-blue-500">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span className="text-blue-600 font-medium">
-                                  {historicoSemanaAnterior[exercicioId][serie.ordem]} reps
-                                </span>
-                              </div>
-                            )}
+                            <div className="flex items-center space-x-2">
+                              {repeticoesFeitas[exercicioId]?.[`serie-${serie.id}`] && (
+                                <div className="flex items-center space-x-1 text-xs bg-green-50 px-2 py-1 rounded-md">
+                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-green-500">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  <span className="text-green-600 font-medium">
+                                    {repeticoesFeitas[exercicioId][`serie-${serie.id}`]} reps
+                                  </span>
+                                </div>
+                              )}
+                              {historicoSemanaAnterior[exercicioId]?.[serie.ordem] && (
+                                <div className="flex items-center space-x-1 text-xs bg-blue-50 px-2 py-1 rounded-md">
+                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-blue-500">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  <span className="text-blue-600 font-medium">
+                                    {historicoSemanaAnterior[exercicioId][serie.ordem]} reps
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
