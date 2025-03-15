@@ -415,24 +415,42 @@ export default function TreinoPage() {
               key={exercicioId}
               className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm"
             >
-              <div className="p-6">
+              <div className="p-4">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-2xl font-bold text-gray-900">{exercicio.nome}</h2>
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-3">
+                    <h2 className="text-xl font-bold text-gray-900">{exercicio.nome}</h2>
+                    <div className="flex items-center space-x-2 text-sm">
+                      <span className="text-gray-500">Meta:</span>
+                      <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                        {exercicio.repeticoesMinimas}-{exercicio.repeticoesMaximas} reps
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
                     <button
                       onClick={() => setVisualizacaoDetalhada(prev => ({
                         ...prev,
                         [exercicioId]: !prev[exercicioId]
                       }))}
-                      className="text-blue-600 hover:text-blue-800 text-base font-medium transition-colors duration-200"
+                      className="text-blue-600 hover:text-blue-800 p-2 rounded-full hover:bg-blue-50 transition-colors"
+                      title={visualizacaoDetalhada[exercicioId] ? "Visualização Simples" : "Visualização Detalhada"}
                     >
-                      {visualizacaoDetalhada[exercicioId] ? 'Visualização Simples' : 'Visualização Detalhada'}
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                        {visualizacaoDetalhada[exercicioId] ? (
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                        ) : (
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
+                        )}
+                      </svg>
                     </button>
                     <button
                       onClick={() => exercicio.id && excluirExercicio(exercicio.id)}
-                      className="text-red-600 hover:text-red-800 text-base font-medium transition-colors duration-200"
+                      className="text-red-600 hover:text-red-800 p-2 rounded-full hover:bg-red-50 transition-colors"
+                      title="Excluir Exercício"
                     >
-                      Excluir
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -440,28 +458,99 @@ export default function TreinoPage() {
                 <div className="space-y-6">
                   {/* Histórico Simples */}
                   {!visualizacaoDetalhada[exercicioId] && (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {seriesDoExercicio.map((serie) => (
                         <div
                           key={serie.id}
-                          className="flex items-center space-x-4 p-2 hover:bg-gray-50 rounded-lg"
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-blue-200 transition-colors"
                         >
-                          <span className="text-lg font-medium text-gray-900 w-24">
-                            {serie.ordem}ª Série
-                          </span>
-                          <span className="text-lg text-gray-600">
-                            {serie.pesoAtual}kg
-                          </span>
-                          <span className="text-lg text-gray-600">
-                            {repeticoesFeitas[exercicioId]?.[`serie-${serie.id}`] || '-'} reps
-                          </span>
-                          {historicoSemanaAnterior[exercicioId]?.[serie.ordem] && (
-                            <span className="text-sm text-blue-600">
-                              (anterior: {historicoSemanaAnterior[exercicioId][serie.ordem]} reps)
+                          <div className="flex items-center space-x-3">
+                            <span className="text-sm font-medium text-gray-500 w-16">
+                              {serie.ordem}ª Série
                             </span>
-                          )}
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="number"
+                                value={serie.pesoAtual}
+                                onChange={(e) => serie.id && atualizarSerie(serie.id, {
+                                  pesoAtual: Number(e.target.value)
+                                })}
+                                className="w-16 px-2 py-1 text-center border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                min="0"
+                                step="0.5"
+                                placeholder="0"
+                              />
+                              <span className="text-sm text-gray-500">kg</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-3">
+                            {serie.tipo === 'SIMPLES' && (
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="999"
+                                  value={repeticoesFeitas[exercicioId]?.[`serie-${serie.id}`] || ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    setRepeticoesFeitas(prev => ({
+                                      ...prev,
+                                      [exercicioId]: {
+                                        ...prev[exercicioId],
+                                        [`serie-${serie.id}`]: value
+                                      }
+                                    }));
+                                  }}
+                                  className="w-16 px-2 py-1 text-center border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="0"
+                                />
+                                <span className="text-sm text-gray-500">reps</span>
+                              </div>
+                            )}
+                            {historicoSemanaAnterior[exercicioId]?.[serie.ordem] && (
+                              <div className="flex items-center space-x-1 text-xs bg-blue-50 px-2 py-1 rounded-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-blue-500">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="text-blue-600 font-medium">
+                                  {historicoSemanaAnterior[exercicioId][serie.ordem]} reps
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
+
+                      {exercicio.tipoExecucao === 'SIMP' && (
+                        <div className="mt-4 space-y-3">
+                          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                            <label className="block text-sm text-gray-600 mb-1">
+                              Observações
+                            </label>
+                            <textarea
+                              value={observacoes[exercicioId] || ''}
+                              onChange={(e) => setObservacoes(prev => ({
+                                ...prev,
+                                [exercicioId]: e.target.value
+                              }))}
+                              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              rows={2}
+                              placeholder="Registre aqui suas observações sobre o treino..."
+                            />
+                          </div>
+
+                          <button
+                            onClick={() => registrarExecucao(exercicioId, seriesDoExercicio)}
+                            className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors duration-200 flex items-center justify-center space-x-2"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Registrar Execução</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 
