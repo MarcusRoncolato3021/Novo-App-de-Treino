@@ -77,12 +77,12 @@ export class TreinoDatabase extends Dexie {
 
   constructor() {
     super('TreinoDatabase');
-    this.version(1).stores({
+    this.version(2).stores({
       treinos: '++id, nome, diaDaSemana',
       exercicios: '++id, treinoId, nome, tipoExecucao, ordem',
       series: '++id, exercicioId, tipo, numero',
       categorias: '++id',
-      cardio: '++id, treinoId, data',
+      cardio: '++id, treinoId, nome, data',
       cardioHistorico: '++id, cardioId, data',
       historico: '++id, exercicioId, data'
     });
