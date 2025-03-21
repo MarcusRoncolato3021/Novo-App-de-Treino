@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { db } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Link from 'next/link';
@@ -22,7 +22,7 @@ interface EditarCargasModalProps {
   onClose: () => void;
 }
 
-export default function TreinosPage() {
+function TreinosContent() {
   const searchParams = useSearchParams();
   const categoria = searchParams.get('categoria') || 'superiores';
   const [modalOpen, setModalOpen] = useState(false);
@@ -158,7 +158,9 @@ export default function TreinosPage() {
                   </div>
                   <div className="flex-1">
                     <h2 className="font-semibold text-lg text-gray-800">{treino.nome}</h2>
-                    <p className="text-sm text-gray-500">{diasDaSemana[treino.diaDaSemana]}</p>
+                    <p className="text-sm text-gray-500">
+                      {treino.diaDaSemana !== undefined ? diasDaSemana[treino.diaDaSemana] : 'Dia não definido'}
+                    </p>
                   </div>
                 </div>
 
@@ -196,7 +198,7 @@ export default function TreinosPage() {
                         </div>
                       </div>
 
-                      {exercicio.tipoExecucao !== 'normal' && (
+                      {exercicio.tipoExecucao !== 'SIMP' && (
                         <div className="mt-2">
                           <span className="inline-block bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full">
                             {exercicio.tipoExecucao}
@@ -222,5 +224,13 @@ export default function TreinosPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function TreinosPage() {
+  return (
+    <Suspense fallback={<div>Carregando...</div>}>
+      <TreinosContent />
+    </Suspense>
   );
 } 
