@@ -9,20 +9,16 @@ export const metadata: Metadata = {
   description: 'Aplicativo para controle de treinos',
   manifest: '/manifest.json',
   themeColor: '#2563eb',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'App de Treino',
-  },
   formatDetection: {
     telephone: false,
   },
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 }
 
 export default function RootLayout({
@@ -39,6 +35,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="App de Treino" />
         <link href="https://fonts.googleapis.com/css2?family=Lato&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
       </head>
       <body className="bg-gray-100 flex justify-center min-h-screen">
         <div className="w-full max-w-[390px] relative">

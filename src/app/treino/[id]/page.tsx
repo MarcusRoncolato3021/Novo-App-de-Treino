@@ -628,55 +628,59 @@ export default function TreinoPage() {
                   </Link>
                 </div>
 
-                <div className="flex flex-col items-center w-full max-w-xl mx-auto mb-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                    <div className="flex flex-col items-center">
-                      <label className="text-sm font-medium text-gray-600 mb-2">Carga</label>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.5"
-                          value={seriesDoExercicio[0]?.peso || ''}
-                          onChange={(e) => {
-                            const novoPeso = Number(e.target.value);
-                            seriesDoExercicio.forEach(serie => {
-                              if (serie.id) {
-                                atualizarSerie(serie.id, { peso: novoPeso });
-                              }
-                            });
-                          }}
-                          className="w-16 px-2 py-1.5 text-center border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                          placeholder="0"
-                        />
-                        <button
-                          onClick={() => {
-                            const pesoAtual = seriesDoExercicio[0]?.peso || 0;
-                            const novoPeso = pesoAtual + 2.5;
-                            seriesDoExercicio.forEach(serie => {
-                              if (serie.id) {
-                                atualizarSerie(serie.id, { peso: novoPeso });
-                              }
-                            });
-                          }}
-                          className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-blue-50 transition-colors border border-blue-200"
-                          title="Aumentar 2.5kg"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                          </svg>
-                        </button>
-                        <span className="text-sm text-gray-600">kg</span>
-                      </div>
+                {/* Informações de Carga e Meta */}
+                <div className="flex items-center justify-between w-full max-w-xl px-4 mb-4">
+                  <div className="flex flex-col items-center">
+                    <label className="text-sm font-medium text-gray-600 mb-2">Carga</label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={seriesDoExercicio[0]?.peso || ''}
+                        onChange={(e) => {
+                          const novoPeso = Number(e.target.value);
+                          seriesDoExercicio.forEach(serie => {
+                            if (serie.id) {
+                              atualizarSerie(serie.id, { peso: novoPeso });
+                            }
+                          });
+                        }}
+                        onBlur={(e) => {
+                          e.target.scrollIntoView(false);
+                          window.scrollTo(0, window.scrollY);
+                        }}
+                        inputMode="decimal"
+                        className="w-16 px-2 py-1.5 text-center border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        placeholder="0"
+                      />
+                      <button
+                        onClick={() => {
+                          const pesoAtual = seriesDoExercicio[0]?.peso || 0;
+                          const novoPeso = pesoAtual + 2.5;
+                          seriesDoExercicio.forEach(serie => {
+                            if (serie.id) {
+                              atualizarSerie(serie.id, { peso: novoPeso });
+                            }
+                          });
+                        }}
+                        className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-blue-50 transition-colors border border-blue-200"
+                        title="Aumentar 2.5kg"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                      </button>
+                      <span className="text-sm text-gray-600">kg</span>
                     </div>
+                  </div>
 
-                    <div className="flex flex-col items-center">
-                      <label className="text-sm font-medium text-gray-600 mb-2">Meta</label>
-                      <div className="flex items-center">
-                        <span className="text-base font-medium text-gray-900 px-4 py-2.5 bg-gray-100 rounded-lg whitespace-nowrap">
-                          {exercicio.repeticoesMinimas}-{exercicio.repeticoesMaximas} repetições
-                        </span>
-                      </div>
+                  <div className="flex flex-col items-center">
+                    <label className="text-sm font-medium text-gray-600 mb-2">Meta</label>
+                    <div className="flex items-center">
+                      <span className="text-sm font-medium text-gray-900 px-3 py-1.5 bg-gray-100 rounded-lg whitespace-nowrap">
+                        {exercicio.repeticoesMinimas}-{exercicio.repeticoesMaximas} reps
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -688,12 +692,12 @@ export default function TreinoPage() {
                       className="bg-gray-50 rounded-lg border border-gray-100 hover:border-blue-200 transition-colors p-4"
                     >
                       <div className="flex flex-col space-y-3">
-                        <div className="flex flex-col items-center mb-2">
+                        <div className="flex items-center justify-between mb-2">
                           <h3 className="text-base font-medium text-gray-700">Feeder {serie.numero}</h3>
-                          <div className="mt-1">
+                          <div className="flex items-center">
                             <span className="text-sm text-gray-500">Meta: </span>
-                            <span className="text-sm font-medium text-gray-700">
-                              {exercicio.repeticoesMinimas}-{exercicio.repeticoesMaximas} repetições
+                            <span className="text-sm font-medium text-gray-700 ml-1">
+                              {exercicio.repeticoesMinimas}-{exercicio.repeticoesMaximas} reps
                             </span>
                           </div>
                         </div>
@@ -748,6 +752,11 @@ export default function TreinoPage() {
                                         }
                                       }));
                                     }}
+                                    onBlur={(e) => {
+                                      e.target.scrollIntoView(false);
+                                      window.scrollTo(0, window.scrollY);
+                                    }}
+                                    inputMode="numeric"
                                     className="w-16 px-2 py-1.5 text-center mx-auto border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                     placeholder="0"
                                   />
