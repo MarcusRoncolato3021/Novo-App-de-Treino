@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { db } from '@/lib/db';
+import { db, Cardio } from '@/lib/db';
 import Link from 'next/link';
 import { useLiveQuery } from 'dexie-react-hooks';
 
@@ -9,6 +9,7 @@ export default function CardioPage() {
   const [exercicio, setExercicio] = useState('');
   const [duracao, setDuracao] = useState('');
   const [nivelBike, setNivelBike] = useState('');
+  const [intensidade, setIntensidade] = useState<'baixa' | 'media' | 'alta'>('media');
 
   const tiposExercicios = [
     'Corrida',
@@ -23,7 +24,7 @@ export default function CardioPage() {
   ];
 
   const historicoCardio = useLiveQuery(
-    () => db.exerciciosCardio
+    () => db.cardio
       .orderBy('data')
       .reverse()
       .limit(5)
@@ -42,12 +43,16 @@ export default function CardioPage() {
     }
 
     try {
-      await db.exerciciosCardio.add({
-        tipo: exercicio,
+      const novoExercicio: Cardio = {
+        nome: exercicio,
         duracao: parseInt(duracao),
-        intensidade: exercicio === 'Bike' ? `Nível ${nivelBike}` : 'N/A',
-        data: new Date()
-      });
+        intensidade: exercicio === 'Bike' ? 'alta' : intensidade,
+        data: new Date(),
+        observacoes: exercicio === 'Bike' ? `Nível ${nivelBike}` : undefined,
+        treinoId: 0 // Como é um exercício avulso, usamos 0 como ID do treino
+      };
+
+      await db.cardio.add(novoExercicio);
 
       alert('Exercício salvo com sucesso!');
       setExercicio('');
@@ -129,6 +134,21 @@ export default function CardioPage() {
               </div>
             )}
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Intensidade
+              </label>
+              <select
+                value={intensidade}
+                onChange={(e) => setIntensidade(e.target.value as 'baixa' | 'media' | 'alta')}
+                className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="baixa">Baixa</option>
+                <option value="media">Média</option>
+                <option value="alta">Alta</option>
+              </select>
+            </div>
+
             <button
               onClick={salvarExercicio}
               className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-300"
@@ -145,10 +165,11 @@ export default function CardioPage() {
               <div key={exercicio.id} className="border-b border-gray-100 pb-4 last:border-0">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-medium text-gray-800">{exercicio.tipo}</h3>
+                    <h3 className="font-medium text-gray-800">{exercicio.nome}</h3>
                     <p className="text-sm text-gray-600">{exercicio.duracao} minutos</p>
-                    {exercicio.intensidade !== 'N/A' && (
-                      <p className="text-sm text-gray-600">{exercicio.intensidade}</p>
+                    <p className="text-sm text-gray-600">Intensidade: {exercicio.intensidade}</p>
+                    {exercicio.observacoes && (
+                      <p className="text-sm text-gray-600">{exercicio.observacoes}</p>
                     )}
                   </div>
                   <span className="text-sm text-gray-500">{formatarData(exercicio.data)}</span>
