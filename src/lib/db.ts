@@ -89,4 +89,15 @@ export class TreinoDatabase extends Dexie {
   }
 }
 
-export const db = new TreinoDatabase(); 
+export const db = new TreinoDatabase();
+
+// Inicializar o banco de dados com tratamento de erro
+try {
+  db.open().catch((err) => {
+    console.error("Erro ao abrir o banco de dados:", err);
+    alert("Erro ao inicializar o banco de dados. Por favor, recarregue a página.");
+  });
+} catch (error) {
+  console.error("Erro ao inicializar o banco de dados:", error);
+  alert("Erro ao inicializar o banco de dados. Por favor, recarregue a página.");
+} 

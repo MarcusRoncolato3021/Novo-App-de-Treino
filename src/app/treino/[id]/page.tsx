@@ -140,7 +140,7 @@ export default function TreinoPage() {
         series.push({
           id: Date.now(),
           exercicioId: novoId,
-          tipo: 'warm-up',
+          tipo: 'warm-up' as TipoSerie,
           numero: 1,
           repeticoes: 15,
           peso: 0
@@ -151,7 +151,7 @@ export default function TreinoPage() {
           series.push({
             id: Date.now() + i,
             exercicioId: novoId,
-            tipo: 'feeder',
+            tipo: 'feeder' as TipoSerie,
             numero: i,
             repeticoes: 5,
             peso: 0
@@ -163,7 +163,7 @@ export default function TreinoPage() {
           series.push({
             id: Date.now() + i + 2,
             exercicioId: novoId,
-            tipo: 'work-set',
+            tipo: 'work-set' as TipoSerie,
             numero: i,
             repeticoes: repeticoesMinimas,
             peso: 0
@@ -175,7 +175,7 @@ export default function TreinoPage() {
           series.push({
             id: Date.now() + i,
             exercicioId: novoId,
-            tipo: 'feeder',
+            tipo: 'feeder' as TipoSerie,
             numero: i,
             repeticoes: repeticoesMinimas,
             peso: 0
