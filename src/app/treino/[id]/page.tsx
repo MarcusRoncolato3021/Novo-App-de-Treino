@@ -231,14 +231,14 @@ export default function TreinoPage() {
         id: Date.now() + serie.numero,
         exercicioId,
         data,
-        peso: serie.peso,
+        peso: serie.peso || 0,
         repeticoes: Number(repeticoesFeitas[exercicioId]?.[`serie-${serie.id}`]) || serie.repeticoes,
-        observacoes: observacoes[exercicioId]
+        observacoes: observacoes[exercicioId] || ''
       }));
 
       await db.historico.bulkAdd(historico);
-      setHistorico(prev => [...prev, ...historico]);
       
+      // Limpar os estados após registrar
       setRepeticoesFeitas(prev => {
         const newState = { ...prev };
         delete newState[exercicioId];
@@ -250,6 +250,12 @@ export default function TreinoPage() {
         delete newState[exercicioId];
         return newState;
       });
+
+      // Atualizar o estado do histórico
+      setHistorico(prev => [...prev, ...historico]);
+
+      // Mostrar mensagem de sucesso
+      alert('Execução registrada com sucesso!');
     } catch (error) {
       console.error('Erro ao registrar execução:', error);
       alert('Erro ao registrar execução. Tente novamente.');
@@ -567,30 +573,26 @@ export default function TreinoPage() {
                   <div className="flex items-center justify-center space-x-6">
                     {exercicio.tipoExecucao === 'SIMP' ? (
                       <div className="flex flex-col items-center">
-                        <span className="text-sm font-medium text-gray-600 mb-1">Cargas</span>
-                        <div className="grid grid-cols-3 gap-4">
-                          {seriesDoExercicio.map((serie) => (
-                            <div key={serie.id} className="flex flex-col items-center">
-                              <span className="text-xs text-gray-500">Série {serie.numero}</span>
-                              <div className="flex items-center space-x-1">
-                                <input
-                                  type="number"
-                                  value={serie.peso || 0}
-                                  onChange={(e) => {
-                                    const novoPeso = Number(e.target.value);
-                                    if (serie.id) {
-                                      atualizarSerie(serie.id, { peso: novoPeso });
-                                    }
-                                  }}
-                                  className="w-16 px-2 py-1 text-center border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                  min="0"
-                                  step="0.5"
-                                  placeholder="0"
-                                />
-                                <span className="text-xs text-gray-500">kg</span>
-                              </div>
-                            </div>
-                          ))}
+                        <label className="text-sm font-medium text-gray-600 mb-1">Carga</label>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="number"
+                            value={seriesDoExercicio[0]?.peso || ''}
+                            onChange={(e) => {
+                              const novoPeso = Number(e.target.value);
+                              // Atualiza o peso de todas as séries
+                              seriesDoExercicio.forEach(serie => {
+                                if (serie.id) {
+                                  atualizarSerie(serie.id, { peso: novoPeso });
+                                }
+                              });
+                            }}
+                            className="w-20 px-3 py-2 text-center border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
+                            min="0"
+                            step="0.5"
+                            placeholder="0"
+                          />
+                          <span className="text-base text-gray-600">kg</span>
                         </div>
                       </div>
                     ) : (
@@ -602,7 +604,7 @@ export default function TreinoPage() {
                             <div className="flex items-center space-x-1">
                               <input
                                 type="number"
-                                value={seriesDoExercicio.find(s => s.tipo === 'warm-up')?.peso || 0}
+                                value={seriesDoExercicio.find(s => s.tipo === 'warm-up')?.peso || ''}
                                 onChange={(e) => {
                                   const novoPeso = Number(e.target.value);
                                   const serie = seriesDoExercicio.find(s => s.tipo === 'warm-up');
@@ -623,7 +625,7 @@ export default function TreinoPage() {
                             <div className="flex items-center space-x-1">
                               <input
                                 type="number"
-                                value={seriesDoExercicio.find(s => s.tipo === 'feeder')?.peso || 0}
+                                value={seriesDoExercicio.find(s => s.tipo === 'feeder')?.peso || ''}
                                 onChange={(e) => {
                                   const novoPeso = Number(e.target.value);
                                   seriesDoExercicio
@@ -647,7 +649,7 @@ export default function TreinoPage() {
                             <div className="flex items-center space-x-1">
                               <input
                                 type="number"
-                                value={seriesDoExercicio.find(s => s.tipo === 'work-set')?.peso || 0}
+                                value={seriesDoExercicio.find(s => s.tipo === 'work-set')?.peso || ''}
                                 onChange={(e) => {
                                   const novoPeso = Number(e.target.value);
                                   seriesDoExercicio
@@ -715,32 +717,99 @@ export default function TreinoPage() {
                 <div className="space-y-6">
                   {/* Histórico Simples */}
                   {!visualizacaoDetalhada[exercicioId] && (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {seriesDoExercicio.map((serie) => (
                         <div
                           key={serie.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-blue-200 transition-colors"
+                          className="flex flex-col p-4 bg-gray-50 rounded-lg border border-gray-100 hover:border-blue-200 transition-colors"
                         >
-                          <div className="flex items-center space-x-4">
-                            <span className="text-base font-medium text-gray-700 w-24">
-                              {exercicio.tipoExecucao === 'SIMP' 
-                                ? `Série ${serie.numero}`
-                                : serie.tipo === 'warm-up' 
-                                  ? 'Warm Up' 
-                                  : serie.tipo === 'feeder'
-                                    ? `Feeder ${serie.numero}`
-                                    : `Work Set ${serie.numero}`}
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-base font-medium text-gray-700">
+                              Série {serie.numero}
                             </span>
-                            
-                            <span className="text-sm text-gray-500">
-                              {serie.tipo === 'warm-up' ? '15-20 reps' :
-                               exercicio.tipoExecucao === 'SIMP' ? `${exercicio.repeticoesMinimas}-${exercicio.repeticoesMaximas} reps` :
-                               serie.tipo === 'feeder' ? '5 reps' :
-                               `${exercicio.repeticoesMinimas}-${exercicio.repeticoesMaximas} reps`}
-                            </span>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm text-gray-500">Meta:</span>
+                              <span className="text-sm font-medium text-gray-700">
+                                {exercicio.repeticoesMinimas}-{exercicio.repeticoesMaximas} reps
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm text-gray-500">Carga:</span>
+                                <span className="text-sm font-medium text-gray-700">
+                                  {serie.peso > 0 ? `${serie.peso} kg` : '-'}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="999"
+                                  value={repeticoesFeitas[exercicioId]?.[`serie-${serie.id}`] || ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    setRepeticoesFeitas(prev => ({
+                                      ...prev,
+                                      [exercicioId]: {
+                                        ...prev[exercicioId],
+                                        [`serie-${serie.id}`]: value
+                                      }
+                                    }));
+                                  }}
+                                  className="w-16 px-2 py-1 text-center border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                  placeholder="0"
+                                />
+                                <span className="text-sm text-gray-500">reps</span>
+                              </div>
+                            </div>
+
+                            {historicoSemanaAnterior[exercicioId]?.[serie.numero] && (
+                              <div className="flex items-center space-x-1 text-sm bg-blue-50 px-3 py-1 rounded-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-blue-500">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="text-blue-600 font-medium">
+                                  {historicoSemanaAnterior[exercicioId][serie.numero]} reps
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
+
+                      {exercicio.tipoExecucao === 'SIMP' && (
+                        <div className="space-y-4 mt-6">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Observações (opcional)
+                            </label>
+                            <textarea
+                              value={observacoes[exercicioId] || ''}
+                              onChange={(e) => setObservacoes(prev => ({
+                                ...prev,
+                                [exercicioId]: e.target.value
+                              }))}
+                              className="w-full px-3 py-2 text-base border border-gray-300 rounded-lg"
+                              rows={2}
+                              placeholder="Registre aqui suas observações sobre o treino..."
+                            />
+                          </div>
+
+                          <button
+                            onClick={() => exercicio.id && registrarExecucao(exercicio.id, seriesDoExercicio)}
+                            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-base transition-colors duration-200 flex items-center justify-center space-x-2"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Registrar Execução</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -781,13 +850,14 @@ export default function TreinoPage() {
                               </label>
                               <input
                                 type="number"
-                                value={serie.peso}
+                                value={serie.peso || ''}
                                 onChange={(e) => serie.id && atualizarSerie(serie.id, {
                                   peso: Number(e.target.value)
                                 })}
                                 className="w-full px-3 py-2 text-base border border-gray-300 rounded-lg text-center"
                                 min="0"
                                 step="0.5"
+                                placeholder="0"
                               />
                             </div>
 
