@@ -120,6 +120,19 @@ export default function ExercicioPage() {
     return <div>Carregando...</div>;
   }
 
+  // Verificar se todas as séries têm repetições registradas
+  if (exercicio.tipoExecucao === 'SIMP') {
+    const seriesSimples = series.filter(s => s.tipo === 'work-set');
+    const faltamRepeticoes = seriesSimples.some(serie =>
+      !repeticoesFeitas[`serie-${serie.id}`] || repeticoesFeitas[`serie-${serie.id}`].trim() === ''
+    );
+
+    if (faltamRepeticoes) {
+      alert('Por favor, preencha as repetições de todas as séries antes de registrar.');
+      return;
+    }
+  }
+
   return (
     <div className="container mx-auto p-4">
       <div className="bg-white rounded-lg shadow-sm p-6">
