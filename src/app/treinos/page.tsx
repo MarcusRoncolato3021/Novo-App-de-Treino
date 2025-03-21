@@ -159,7 +159,9 @@ function TreinosContent() {
                   <div className="flex-1">
                     <h2 className="font-semibold text-lg text-gray-800">{treino.nome}</h2>
                     <p className="text-sm text-gray-500">
-                      {treino.diaDaSemana !== undefined ? diasDaSemana[treino.diaDaSemana] : 'Dia não definido'}
+                      {treino.diaDaSemana !== undefined && treino.diaDaSemana >= 0 && treino.diaDaSemana < diasDaSemana.length 
+                        ? diasDaSemana[treino.diaDaSemana] 
+                        : 'Dia não definido'}
                     </p>
                   </div>
                 </div>
