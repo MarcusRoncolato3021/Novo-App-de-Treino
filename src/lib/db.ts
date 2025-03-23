@@ -13,13 +13,14 @@ export interface Treino {
 
 export interface Exercicio {
   id?: number;
-  treinoId: number;
   nome: string;
+  tipo: 'SIMP' | 'COMP';
   tipoExecucao: TipoExecucao;
   ordem: number;
   numeroWorkSets: number;
   repeticoesMinimas: number;
   repeticoesMaximas: number;
+  treinoId: number;
   observacoes?: string;
 }
 
@@ -32,14 +33,16 @@ export interface Serie {
   peso: number;
 }
 
-export interface HistoricoExercicio {
-  id?: number;
+export type HistoricoExercicio = {
+  id: number;
   exercicioId: number;
   data: Date;
   peso: number;
   repeticoes: number;
-  observacoes?: string;
-}
+  observacoes: string;
+  tipo: TipoSerie;
+  ordem: number;
+};
 
 export interface Categoria {
   id?: number;
@@ -91,13 +94,52 @@ export class TreinoDatabase extends Dexie {
 
 export const db = new TreinoDatabase();
 
-// Inicializar o banco de dados com tratamento de erro
-try {
-  db.open().catch((err) => {
-    console.error("Erro ao abrir o banco de dados:", err);
-    alert("Erro ao inicializar o banco de dados. Por favor, recarregue a página.");
+// Função para verificar se o IndexedDB está disponível
+const checkIndexedDB = () => {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') {
+      reject(new Error('IndexedDB não está disponível no servidor'));
+      return;
+    }
+
+    const testDb = window.indexedDB.open('test');
+    testDb.onerror = () => {
+      reject(new Error('IndexedDB não está disponível ou está bloqueado'));
+    };
+    testDb.onsuccess = () => {
+      testDb.result.close();
+      resolve(true);
+    };
   });
-} catch (error) {
-  console.error("Erro ao inicializar o banco de dados:", error);
-  alert("Erro ao inicializar o banco de dados. Por favor, recarregue a página.");
+};
+
+// Inicializar o banco de dados com tratamento de erro
+export const initDatabase = async () => {
+  try {
+    await checkIndexedDB();
+    await db.open();
+    console.log('Banco de dados inicializado com sucesso');
+    return true;
+  } catch (error) {
+    console.error("Erro ao inicializar o banco de dados:", error);
+    return false;
+  }
+};
+
+// Função para verificar se o banco de dados está pronto
+export const isDatabaseReady = async () => {
+  try {
+    if (!db.isOpen()) {
+      await initDatabase();
+    }
+    return db.isOpen();
+  } catch (error) {
+    console.error("Erro ao verificar o banco de dados:", error);
+    return false;
+  }
+};
+
+// Inicializar o banco de dados apenas no lado do cliente
+if (typeof window !== 'undefined') {
+  initDatabase();
 } 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { db, Exercicio, Serie, TipoExecucao, TipoSerie } from '@/lib/db';
+import { db, Exercicio, Serie, TipoExecucao, TipoSerie, isDatabaseReady } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Link from 'next/link';
 import type { HistoricoExercicio } from '@/lib/db';
@@ -37,6 +37,11 @@ export default function TreinoPage() {
   const [exercicioSelecionado, setExercicioSelecionado] = useState<Exercicio | null>(null);
   const [cargas, setCargas] = useState<{[key: number]: number}>({});
   const [historico, setHistorico] = useState<HistoricoExercicio[]>([]);
+  const [modalEditarExercicioOpen, setModalEditarExercicioOpen] = useState(false);
+  const [exercicioParaEditar, setExercicioParaEditar] = useState<Exercicio | null>(null);
+  const [editarExercicioNome, setEditarExercicioNome] = useState('');
+  const [editarRepeticoesMinimas, setEditarRepeticoesMinimas] = useState(8);
+  const [editarRepeticoesMaximas, setEditarRepeticoesMaximas] = useState(12);
 
   const treino = useLiveQuery(
     () => db.treinos.get(treinoId),
@@ -82,6 +87,7 @@ export default function TreinoPage() {
             const dataRegistro = new Date(registro.data);
             return dataRegistro >= dataInicioSemanaAnterior && dataRegistro < dataAtual;
           })
+          .reverse()
           .toArray();
 
         if (registros.length > 0) {
@@ -117,80 +123,152 @@ export default function TreinoPage() {
     buscarHistoricoSemanaAnterior();
   }, [exercicios]);
 
-  const adicionarExercicio = async () => {
-    if (!novoExercicioNome.trim()) return;
+  // Inicializar repetições para exercícios COMP
+  useEffect(() => {
+    if (!exercicios || !series) return;
 
-    try {
-      const novoId = Date.now();
+    const novoEstado = { ...repeticoesFeitas };
+    let mudou = false;
+    
+    exercicios.forEach(exercicio => {
+      if (!exercicio.id) return;
+      const exercicioId = exercicio.id;
       
-      const exercicio: Exercicio = {
-        id: novoId,
+      if (!novoEstado[exercicioId]) {
+        novoEstado[exercicioId] = {};
+        mudou = true;
+      }
+
+      const seriesExercicio = series.filter(s => s.exercicioId === exercicioId);
+      
+      seriesExercicio.forEach(serie => {
+        if (!serie.id) return;
+        const serieId = serie.id;
+        
+        const chave = `serie-${serieId}`;
+        if (exercicio.tipo === 'COMP') {
+          if (serie.tipo === 'warm-up' && !novoEstado[exercicioId][chave]) {
+            novoEstado[exercicioId][chave] = '15';
+            mudou = true;
+          } else if (serie.tipo === 'feeder' && !novoEstado[exercicioId][chave]) {
+            novoEstado[exercicioId][chave] = '5';
+            mudou = true;
+          }
+        }
+      });
+    });
+
+    if (mudou) {
+      console.log('Inicializando repetições:', novoEstado);
+      setRepeticoesFeitas(novoEstado);
+    }
+  }, [exercicios, series]);
+
+  const adicionarExercicio = async () => {
+    try {
+      if (!novoExercicioNome.trim()) {
+        throw new Error('Por favor, insira um nome para o exercício');
+      }
+
+      if (repeticoesMinimas <= 0 || repeticoesMaximas <= 0) {
+        throw new Error('As repetições mínimas e máximas devem ser maiores que zero');
+      }
+
+      if (repeticoesMinimas > repeticoesMaximas) {
+        throw new Error('As repetições mínimas não podem ser maiores que as máximas');
+      }
+
+      if (tipoExecucao === 'COMP' && (numeroWorkSets < 1 || numeroWorkSets > 10)) {
+        throw new Error('O número de work sets deve estar entre 1 e 10');
+      }
+
+      if (tipoExecucao === 'SIMP' && (numeroSeriesSimp < 1 || numeroSeriesSimp > 10)) {
+        throw new Error('O número de séries deve estar entre 1 e 10');
+      }
+
+      const exercicioId = await db.exercicios.add({
+        nome: novoExercicioNome.trim(),
         treinoId: Number(params.id),
-        nome: novoExercicioNome,
-        tipoExecucao,
-        ordem: exercicios?.length || 0,
-        numeroWorkSets: tipoExecucao === 'COMP' ? numeroWorkSets : numeroSeriesSimp,
-        repeticoesMinimas,
-        repeticoesMaximas,
-        observacoes: ''
-      };
+        tipo: tipoExecucao,
+        tipoExecucao: tipoExecucao,
+        repeticoesMinimas: Number(repeticoesMinimas),
+        repeticoesMaximas: Number(repeticoesMaximas),
+        ordem: (exercicios?.length || 0) + 1,
+        numeroWorkSets: tipoExecucao === 'COMP' ? numeroWorkSets : numeroSeriesSimp
+      });
 
-      await db.exercicios.add(exercicio);
+      console.log('Exercício adicionado:', { exercicioId, tipoExecucao });
 
-      const series: Serie[] = [];
+      // Criar séries baseado no tipo de exercício
+      const series = [];
       if (tipoExecucao === 'COMP') {
-        // Warm Up
+        // Warm Up (primeira série)
         series.push({
-          id: Date.now(),
-          exercicioId: novoId,
-          tipo: 'warm-up',
+          exercicioId,
           numero: 1,
+          peso: 0,
+          tipo: 'warm-up' as TipoSerie,
           repeticoes: 15,
-          peso: 0
+          ordem: 1
         });
 
-        // Feeders
-        for (let i = 1; i <= 2; i++) {
+        // 2 Feeder Sets (séries 2 e 3)
+        for (let i = 0; i < 2; i++) {
           series.push({
-            id: Date.now() + i,
-            exercicioId: novoId,
-            tipo: 'feeder',
-            numero: i,
+            exercicioId,
+            numero: i + 2,
+            peso: 0,
+            tipo: 'feeder' as TipoSerie,
             repeticoes: 5,
-            peso: 0
+            ordem: i + 2
           });
         }
 
-        // Work Sets
-        for (let i = 1; i <= numeroWorkSets; i++) {
+        // Work Sets (séries 4 em diante)
+        for (let i = 0; i < numeroWorkSets; i++) {
           series.push({
-            id: Date.now() + i + 2,
-            exercicioId: novoId,
-            tipo: 'work-set',
-            numero: i,
-            repeticoes: repeticoesMinimas,
-            peso: 0
+            exercicioId,
+            numero: i + 4,
+            peso: 0,
+            tipo: 'work-set' as TipoSerie,
+            repeticoes: 0,
+            ordem: i + 4
           });
         }
       } else {
-        // Séries SIMP (todas são work-set)
-        for (let i = 1; i <= numeroSeriesSimp; i++) {
+        // Para exercícios SIMP, todas as séries são work sets
+        for (let i = 0; i < numeroSeriesSimp; i++) {
           series.push({
-            id: Date.now() + i,
-            exercicioId: novoId,
-            tipo: 'work-set',
-            numero: i,
-            repeticoes: repeticoesMinimas,
-            peso: 0
+            exercicioId,
+            numero: i + 1,
+            peso: 0,
+            tipo: 'work-set' as TipoSerie,
+            repeticoes: 0,
+            ordem: i + 1
           });
         }
       }
 
+      console.log('Séries a serem adicionadas:', series);
       await db.series.bulkAdd(series);
+
+      // Limpar estado
       setNovoExercicioNome('');
+      setTipoExecucao('SIMP');
+      setRepeticoesMinimas(8);
+      setRepeticoesMaximas(12);
+      setNumeroWorkSets(3);
+      setNumeroSeriesSimp(3);
+      setModalCargasOpen(false);
+
+      alert('Exercício adicionado com sucesso!');
     } catch (error) {
       console.error('Erro ao adicionar exercício:', error);
+      if (error instanceof Error) {
+        alert(`Erro ao adicionar exercício: ${error.message}`);
+      } else {
       alert('Erro ao adicionar exercício. Tente novamente.');
+      }
     }
   };
 
@@ -216,10 +294,159 @@ export default function TreinoPage() {
       if (!serieId) {
         throw new Error('ID da série inválido');
       }
+
+      // Validar peso
+      if (novosDados.peso !== undefined) {
+        if (novosDados.peso < 0) {
+          throw new Error('O peso não pode ser negativo');
+        }
+        if (novosDados.peso > 999) {
+          throw new Error('O peso excede o limite máximo');
+        }
+      }
+
+      // Validar repetições
+      if (novosDados.repeticoes !== undefined) {
+        if (novosDados.repeticoes < 0) {
+          throw new Error('O número de repetições não pode ser negativo');
+        }
+        if (novosDados.repeticoes > 999) {
+          throw new Error('O número de repetições excede o limite máximo');
+        }
+      }
+
+      // Atualizar série em uma única transação
+      await db.transaction('rw', [db.series], async () => {
       await db.series.update(serieId, novosDados);
+      });
+
+      console.log('Série atualizada com sucesso:', { serieId, novosDados });
     } catch (error) {
       console.error('Erro ao atualizar série:', error);
+      if (error instanceof Error) {
+        alert(`Erro ao atualizar série: ${error.message}`);
+      } else {
       alert('Erro ao atualizar série. Tente novamente.');
+      }
+    }
+  };
+
+  const atualizarRepeticoes = (exercicioId: number, serieId: string | number, value: string) => {
+    try {
+      // Validar o valor
+      if (value && !(/^\d+$/.test(value))) {
+        console.error('Valor inválido para repetições:', value);
+        return;
+      }
+
+      // Criar uma cópia do estado atual
+      const novoEstado = { ...repeticoesFeitas };
+      
+      // Inicializar o objeto do exercício se não existir
+      if (!novoEstado[exercicioId]) {
+        novoEstado[exercicioId] = {};
+      }
+      
+      // Atualizar o valor da série apenas se for um número válido
+      const numeroRepeticoes = value ? parseInt(value, 10) : '';
+      if (numeroRepeticoes !== '' && (isNaN(numeroRepeticoes) || numeroRepeticoes < 0)) {
+        console.error('Número de repetições inválido:', value);
+        return;
+      }
+
+      novoEstado[exercicioId][`serie-${serieId}`] = value;
+      
+      // Atualizar o estado em uma única operação
+      setRepeticoesFeitas(novoEstado);
+      
+      console.log('Repetições atualizadas:', {
+        exercicioId,
+        serieId,
+        value,
+        novoEstado: novoEstado[exercicioId]
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar repetições:', error);
+    }
+  };
+
+  const verificarRepeticoesPreenchidas = (exercicioId: number, series: Serie[]) => {
+    try {
+      const exercicio = exercicios?.find(e => e.id === exercicioId);
+      if (!exercicio) return false;
+
+      // Para exercícios COMP, verificar apenas as work sets
+      if (exercicio.tipo === 'COMP') {
+        // Filtrar apenas as work sets (séries 4, 5 e 6)
+        const workSets = series
+          .filter(s => s.tipo === 'work-set' && s.numero >= 4)
+          .sort((a, b) => a.numero - b.numero);
+
+        if (workSets.length === 0) {
+          console.log('Nenhuma work set encontrada');
+          return false;
+        }
+
+        const repeticoesExercicio = repeticoesFeitas[exercicioId] || {};
+        
+        const todasPreenchidas = workSets.every(serie => {
+          if (!serie.id) return false;
+
+          const repeticoesValue = repeticoesExercicio[`serie-${serie.id}`];
+          const isPreenchida = repeticoesValue && repeticoesValue.trim() !== '';
+
+          console.log(`Verificando work set ${serie.numero}:`, {
+            id: serie.id,
+            repeticoesValue,
+            isPreenchida
+          });
+
+          return isPreenchida;
+        });
+
+        console.log('Resultado da verificação COMP:', {
+          exercicioId,
+          todasPreenchidas,
+          workSets: workSets.map(s => ({
+            numero: s.numero,
+            id: s.id,
+            repeticoes: repeticoesFeitas[exercicioId]?.[`serie-${s.id}`]
+          }))
+        });
+
+        return todasPreenchidas;
+      }
+
+      // Para exercícios SIMP, verificar todas as séries
+      const seriesParaVerificar = series.filter(s => s.tipo === 'work-set');
+
+      if (seriesParaVerificar.length === 0) {
+        console.log('Nenhuma série para verificar');
+        return false;
+      }
+
+      const repeticoesExercicio = repeticoesFeitas[exercicioId] || {};
+      
+      const todasPreenchidas = seriesParaVerificar.every(serie => {
+        if (!serie.id) return false;
+
+        const repeticoesValue = repeticoesExercicio[`serie-${serie.id}`];
+        const isPreenchida = repeticoesValue && repeticoesValue.trim() !== '';
+
+        console.log(`Verificando série ${serie.numero}:`, {
+          id: serie.id,
+          tipo: serie.tipo,
+          repeticoesValue,
+          isPreenchida
+        });
+
+        return isPreenchida;
+      });
+
+      return todasPreenchidas;
+    } catch (error) {
+      console.error('Erro ao verificar repetições:', error);
+      return false;
     }
   };
 
@@ -229,75 +456,277 @@ export default function TreinoPage() {
         throw new Error('ID do exercício inválido');
       }
 
-      // Verificar se todas as séries têm repetições registradas
-      const todasSeries = series.every(serie => 
-        repeticoesFeitas[exercicioId]?.[`serie-${serie.id}`] && 
-        repeticoesFeitas[exercicioId][`serie-${serie.id}`].trim() !== ''
-      );
-
-      if (!todasSeries) {
-        alert('Por favor, preencha as repetições de todas as séries antes de registrar.');
-        return;
+      // Verificar se o exercício existe
+      const exercicio = await db.exercicios.get(exercicioId);
+      if (!exercicio) {
+        throw new Error('Exercício não encontrado');
       }
 
       const data = new Date();
-      const historico: HistoricoExercicio[] = series.map(serie => ({
-        id: Date.now() + Math.random(), // Garante IDs únicos
+      const historico: HistoricoExercicio[] = [];
+
+      // Para exercícios COMP, precisamos mapear corretamente as work sets
+      if (exercicio.tipo === 'COMP') {
+        // Filtrar apenas as work sets (séries 4, 5 e 6)
+        const workSets = series
+          .filter(s => s.tipo === 'work-set' && s.numero >= 4)
+          .sort((a, b) => a.numero - b.numero);
+
+        // Verificar se todas as work sets têm repetições preenchidas
+        const todasPreenchidas = workSets.every(serie => {
+          if (!serie.id) return false;
+          const repeticoesValue = repeticoesFeitas[exercicioId]?.[`serie-${serie.id}`];
+          return repeticoesValue && repeticoesValue.trim() !== '';
+        });
+
+        if (!todasPreenchidas) {
+          throw new Error('Por favor, preencha as repetições dos work sets antes de registrar');
+        }
+
+        // Registrar cada work set mantendo a ordem correta
+        workSets.forEach((serie) => {
+          if (!serie.id) return;
+
+          const repeticoesValue = repeticoesFeitas[exercicioId]?.[`serie-${serie.id}`];
+          if (repeticoesValue && repeticoesValue.trim() !== '') {
+            const repeticoes = Number(repeticoesValue);
+            
+            if (repeticoes > 0) {
+              historico.push({
+                id: Date.now() + Math.random(),
         exercicioId,
         data,
-        peso: serie.peso || 0,
-        repeticoes: Number(repeticoesFeitas[exercicioId][`serie-${serie.id}`]),
-        observacoes: observacoes[exercicioId] || ''
-      }));
+                peso: serie.peso || 0,
+                repeticoes,
+                observacoes: observacoes[exercicioId] || '',
+                tipo: 'work-set',
+                ordem: serie.numero - 3 // Converte série 4, 5, 6 para 1, 2, 3
+              });
+            }
+          }
+        });
 
-      // Atualizar as cargas nas séries
-      for (const serie of series) {
-        if (serie.id) {
-          await atualizarSerie(serie.id, { 
-            peso: serie.peso,
-            repeticoes: Number(repeticoesFeitas[exercicioId][`serie-${serie.id}`])
-          });
+        if (historico.length === 0) {
+          throw new Error('Nenhuma repetição válida para registrar');
         }
-      }
 
-      // Salvar no histórico
+        // Registrar o histórico em uma única transação
+        await db.transaction('rw', [db.historico], async () => {
       await db.historico.bulkAdd(historico);
+        });
+
+        // Atualizar estados após sucesso
+      setHistorico(prev => [...prev, ...historico]);
       
-      // Limpar os estados após registrar
+        // Atualizar histórico da semana anterior
+        const novoHistoricoSemanaAnterior = { ...historicoSemanaAnterior };
+        if (!novoHistoricoSemanaAnterior[exercicioId]) {
+          novoHistoricoSemanaAnterior[exercicioId] = {};
+        }
+
+        historico.forEach(registro => {
+          novoHistoricoSemanaAnterior[exercicioId][registro.ordem] = {
+            repeticoes: registro.repeticoes,
+            peso: registro.peso
+          };
+        });
+        
+        setHistoricoSemanaAnterior(novoHistoricoSemanaAnterior);
+        
+        // Limpar estados
       setRepeticoesFeitas(prev => {
-        const newState = { ...prev };
-        delete newState[exercicioId];
-        return newState;
+          const novo = { ...prev };
+          delete novo[exercicioId];
+          return novo;
       });
       
       setObservacoes(prev => {
-        const newState = { ...prev };
-        delete newState[exercicioId];
-        return newState;
-      });
+          const novo = { ...prev };
+          delete novo[exercicioId];
+          return novo;
+        });
 
-      // Atualizar o estado do histórico
-      setHistorico(prev => [...prev, ...historico]);
-
-      // Atualizar o histórico da semana anterior
-      const historicoTemp = { ...historicoSemanaAnterior };
-      if (!historicoTemp[exercicioId]) {
-        historicoTemp[exercicioId] = {};
+        alert('Execução registrada com sucesso!');
       }
-      series.forEach((serie, index) => {
-        historicoTemp[exercicioId][serie.numero] = {
-          repeticoes: Number(repeticoesFeitas[exercicioId][`serie-${serie.id}`]),
-          peso: serie.peso || 0
-        };
-      });
-      setHistoricoSemanaAnterior(historicoTemp);
-
-      // Mostrar mensagem de sucesso
-      alert('Execução registrada com sucesso!');
     } catch (error) {
       console.error('Erro ao registrar execução:', error);
+      if (error instanceof Error) {
+        alert(`Erro ao registrar execução: ${error.message}`);
+      } else {
       alert('Erro ao registrar execução. Tente novamente.');
+      }
     }
+  };
+
+  const adicionarSerie = async (exercicioId: number, numeroAtual: number) => {
+    try {
+      if (!exercicioId) {
+        throw new Error('ID do exercício inválido');
+      }
+
+      if (numeroAtual >= 10) {
+        throw new Error('Número máximo de séries atingido');
+      }
+
+      const novaSerie: Serie = {
+        id: Date.now(),
+        exercicioId,
+        tipo: 'work-set' as TipoSerie,
+        numero: numeroAtual + 1,
+        repeticoes: 0,
+        peso: series?.find(s => s.exercicioId === exercicioId)?.peso || 0
+      };
+
+      console.log('Adicionando nova série:', novaSerie);
+      await db.series.add(novaSerie);
+    } catch (error) {
+      console.error('Erro ao adicionar série:', error);
+      if (error instanceof Error) {
+        alert(`Erro ao adicionar série: ${error.message}`);
+      } else {
+        alert('Erro ao adicionar série. Tente novamente.');
+      }
+    }
+  };
+
+  const removerUltimaSerie = async (exercicioId: number) => {
+    try {
+      const seriesDoExercicio = series?.filter(s => s.exercicioId === exercicioId) || [];
+      if (seriesDoExercicio.length <= 1) {
+        throw new Error('Não é possível remover todas as séries');
+      }
+      
+      const ultimaSerie = seriesDoExercicio[seriesDoExercicio.length - 1];
+      if (!ultimaSerie?.id) {
+        throw new Error('Série inválida');
+      }
+
+      console.log('Removendo série:', ultimaSerie);
+      await db.series.delete(ultimaSerie.id);
+    } catch (error) {
+      console.error('Erro ao remover série:', error);
+      if (error instanceof Error) {
+        alert(`Erro ao remover série: ${error.message}`);
+      } else {
+        alert('Erro ao remover série. Tente novamente.');
+      }
+    }
+  };
+
+  const editarExercicio = async () => {
+    try {
+      if (!exercicioParaEditar?.id) {
+        throw new Error('Exercício inválido');
+      }
+
+      if (!editarExercicioNome.trim()) {
+        throw new Error('Por favor, insira um nome para o exercício');
+      }
+
+      if (editarRepeticoesMinimas <= 0 || editarRepeticoesMaximas <= 0) {
+        throw new Error('As repetições mínimas e máximas devem ser maiores que zero');
+      }
+
+      if (editarRepeticoesMinimas > editarRepeticoesMaximas) {
+        throw new Error('As repetições mínimas não podem ser maiores que as máximas');
+      }
+
+      await db.exercicios.update(exercicioParaEditar.id, {
+        nome: editarExercicioNome.trim(),
+        repeticoesMinimas: editarRepeticoesMinimas,
+        repeticoesMaximas: editarRepeticoesMaximas
+      });
+
+      setModalEditarExercicioOpen(false);
+      setExercicioParaEditar(null);
+      setEditarExercicioNome('');
+      setEditarRepeticoesMinimas(8);
+      setEditarRepeticoesMaximas(12);
+
+      alert('Exercício atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao editar exercício:', error);
+      if (error instanceof Error) {
+        alert(`Erro ao editar exercício: ${error.message}`);
+      } else {
+        alert('Erro ao editar exercício. Tente novamente.');
+      }
+    }
+  };
+
+  const ModalEditarExercicio = ({ exercicio, onClose }: { exercicio: Exercicio; onClose: () => void }) => {
+    useEffect(() => {
+      setEditarExercicioNome(exercicio.nome);
+      setEditarRepeticoesMinimas(exercicio.repeticoesMinimas);
+      setEditarRepeticoesMaximas(exercicio.repeticoesMaximas);
+    }, [exercicio]);
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl p-6 w-[90%] max-w-md">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-800">Editar Exercício</h3>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Exercício</label>
+              <input
+                type="text"
+                value={editarExercicioNome}
+                onChange={(e) => setEditarExercicioNome(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Repetições Mínimas</label>
+                <input
+                  type="number"
+                  value={editarRepeticoesMinimas}
+                  onChange={(e) => setEditarRepeticoesMinimas(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  min="1"
+                  max="100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Repetições Máximas</label>
+                <input
+                  type="number"
+                  value={editarRepeticoesMaximas}
+                  onChange={(e) => setEditarRepeticoesMaximas(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  min="1"
+                  max="100"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end space-x-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={editarExercicio}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+            >
+              Salvar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const EditarCargasModal = ({ exercicio, onClose }: { exercicio: Exercicio; onClose: () => void }) => {
@@ -598,7 +1027,7 @@ export default function TreinoPage() {
         {exercicios?.map((exercicio) => {
           const seriesDoExercicio = series?.filter(s => s.exercicioId === exercicio.id) || [];
           const exercicioId = exercicio.id!;
-          const isExpandido = exerciciosExpandidos[exercicioId];
+          const repeticoesPreenchidas = verificarRepeticoesPreenchidas(exercicioId, seriesDoExercicio);
           
           return (
             <div
@@ -607,15 +1036,29 @@ export default function TreinoPage() {
             >
               <div className="p-4">
                 <div className="flex items-center justify-between mb-4">
-                  <button
-                    onClick={() => excluirExercicio(exercicioId)}
-                    className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors"
-                    title="Excluir Exercício"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                    </svg>
-                  </button>
+                        <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => excluirExercicio(exercicioId)}
+                      className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors"
+                      title="Excluir Exercício"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setExercicioParaEditar(exercicio);
+                        setModalEditarExercicioOpen(true);
+                      }}
+                      className="text-blue-600 hover:text-blue-800 p-2 rounded-full hover:bg-blue-50 transition-colors"
+                      title="Editar Exercício"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                      </svg>
+                    </button>
+                        </div>
                   <h2 className="text-xl font-bold text-gray-900 text-center flex-1">{exercicio.nome}</h2>
                   <Link
                     href={`/exercicio/${exercicioId}`}
@@ -626,44 +1069,44 @@ export default function TreinoPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </Link>
-                </div>
+                      </div>
 
                 {/* Informações de Carga e Meta */}
                 <div className="flex items-center justify-between w-full max-w-xl px-4 mb-4">
-                  <div className="flex flex-col items-center">
-                    <label className="text-sm font-medium text-gray-600 mb-2">Carga</label>
+                      <div className="flex flex-col items-center">
+                    <label className="text-sm font-medium text-gray-600 mb-2">Carga Work Sets</label>
                     <div className="flex items-center space-x-2">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        value={seriesDoExercicio[0]?.peso || ''}
-                        onChange={(e) => {
-                          const novoPeso = Number(e.target.value);
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.5"
+                        value={seriesDoExercicio.find(s => s.tipo === 'work-set')?.peso || ''}
+                                onChange={(e) => {
+                                  const novoPeso = Number(e.target.value);
                           seriesDoExercicio.forEach(serie => {
-                            if (serie.id) {
-                              atualizarSerie(serie.id, { peso: novoPeso });
-                            }
-                          });
-                        }}
+                            if (serie.id && serie.tipo === 'work-set') {
+                                        atualizarSerie(serie.id, { peso: novoPeso });
+                                      }
+                                    });
+                                }}
                         onBlur={(e) => {
                           e.target.scrollIntoView(false);
                           window.scrollTo(0, window.scrollY);
                         }}
                         inputMode="decimal"
                         className="w-16 px-2 py-1.5 text-center border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                        placeholder="0"
-                      />
+                                placeholder="0"
+                              />
                       <button
                         onClick={() => {
-                          const pesoAtual = seriesDoExercicio[0]?.peso || 0;
+                          const pesoAtual = seriesDoExercicio.find(s => s.tipo === 'work-set')?.peso || 0;
                           const novoPeso = pesoAtual + 2.5;
                           seriesDoExercicio.forEach(serie => {
-                            if (serie.id) {
-                              atualizarSerie(serie.id, { peso: novoPeso });
-                            }
-                          });
-                        }}
+                            if (serie.id && serie.tipo === 'work-set') {
+                                        atualizarSerie(serie.id, { peso: novoPeso });
+                                      }
+                                    });
+                                }}
                         className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-blue-50 transition-colors border border-blue-200"
                         title="Aumentar 2.5kg"
                       >
@@ -672,85 +1115,146 @@ export default function TreinoPage() {
                         </svg>
                       </button>
                       <span className="text-sm text-gray-600">kg</span>
-                    </div>
-                  </div>
+                            </div>
+                          </div>
 
-                  <div className="flex flex-col items-center">
+                    <div className="flex flex-col items-center">
                     <label className="text-sm font-medium text-gray-600 mb-2">Meta</label>
-                    <div className="flex items-center">
+                    <div className="flex items-center space-x-2">
                       <span className="text-sm font-medium text-gray-900 px-3 py-1.5 bg-gray-100 rounded-lg whitespace-nowrap">
                         {exercicio.repeticoesMinimas}-{exercicio.repeticoesMaximas} reps
                       </span>
+                      {exercicio.tipo === 'SIMP' && (
+                        <div className="flex items-center space-x-1">
+                      <button
+                            onClick={() => removerUltimaSerie(exercicioId)}
+                            className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-blue-50 transition-colors border border-blue-200"
+                            title="Remover série"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" />
+                        </svg>
+                      </button>
+                      <button
+                            onClick={() => adicionarSerie(exercicioId, seriesDoExercicio.length)}
+                            className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-blue-50 transition-colors border border-blue-200"
+                            title="Adicionar série"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                      </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  {seriesDoExercicio.map((serie) => (
-                    <div
-                      key={serie.id}
-                      className="bg-gray-50 rounded-lg border border-gray-100 hover:border-blue-200 transition-colors p-4"
-                    >
-                      <div className="flex flex-col space-y-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-base font-medium text-gray-700">Feeder {serie.numero}</h3>
-                          <div className="flex items-center">
-                            <span className="text-sm text-gray-500">Meta: </span>
-                            <span className="text-sm font-medium text-gray-700 ml-1">
-                              {exercicio.repeticoesMinimas}-{exercicio.repeticoesMaximas} reps
-                            </span>
-                          </div>
-                        </div>
+                    <div className="space-y-3">
+                  {seriesDoExercicio.slice(0, exercicio.tipo === 'COMP' ? 6 : undefined).map((serie) => {
+                    let nomeSerie = '';
+                    if (exercicio.tipo === 'COMP') {
+                      if (serie.numero === 1) {
+                        nomeSerie = 'Warm Up';
+                      } else if (serie.numero === 2 || serie.numero === 3) {
+                        nomeSerie = `Feeder ${serie.numero - 1}`;
+                      } else if (serie.numero <= 6) {
+                        nomeSerie = `Work Set ${serie.numero - 3}`;
+                      }
+                    } else {
+                      nomeSerie = `Work Set ${serie.numero}`;
+                    }
 
-                        <div className="overflow-x-auto">
-                          <table className="w-full">
-                            <thead>
-                              <tr>
-                                <th className="w-24 text-center"></th>
-                                <th className="px-3 py-1.5 text-center">
-                                  <span className="text-sm text-gray-600">Antes</span>
-                                </th>
-                                <th className="px-3 py-1.5 text-center">
-                                  <span className="text-sm text-gray-600">Hoje</span>
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <td className="px-2 py-2 text-sm text-gray-600 font-medium text-center">Carga</td>
-                                <td className="px-3 py-2 text-center">
-                                  <span className="text-sm text-blue-600">
-                                    {historicoSemanaAnterior[exercicioId]?.[serie.numero]?.peso || '-'} kg
+                    return (
+                        <div
+                          key={serie.id}
+                        className="bg-gray-50 rounded-lg border border-gray-100 hover:border-blue-200 transition-colors p-4"
+                      >
+                        <div className="flex flex-col space-y-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-base font-medium text-gray-700">{nomeSerie}</h3>
+                            <div className="flex items-center">
+                              <span className="text-sm text-gray-500">Meta: </span>
+                              <span className="text-sm font-medium text-gray-700 ml-1">
+                                {exercicio.tipo === 'COMP' ? (
+                                  serie.numero === 1 ? '15 reps' :
+                                  (serie.numero === 2 || serie.numero === 3) ? '5 reps' :
+                                  `${exercicio.repeticoesMinimas}-${exercicio.repeticoesMaximas} reps`
+                                ) : (
+                                  `${exercicio.repeticoesMinimas}-${exercicio.repeticoesMaximas} reps`
+                                )}
                                   </span>
-                                </td>
-                                <td className="px-3 py-2 text-center">
-                                  <span className="text-sm text-gray-600">
-                                    {serie.peso || '0'} kg
+                            </div>
+                          </div>
+
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
+                              <thead>
+                                <tr>
+                                  <th className="w-24 text-center"></th>
+                                  <th className="px-3 py-1.5 text-center">
+                                    <span className="text-sm text-gray-600">Antes</span>
+                                  </th>
+                                  <th className="px-3 py-1.5 text-center">
+                                    <span className="text-sm text-gray-600">Hoje</span>
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  <td className="px-2 py-2 text-sm text-gray-600 font-medium text-center">Carga</td>
+                                  <td className="px-3 py-2 text-center">
+                                    <span className="text-sm text-blue-600">
+                                      {historicoSemanaAnterior[exercicioId]?.[serie.numero]?.peso || '-'} kg
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-center">
+                                    {serie.tipo === 'work-set' ? (
+                                      <span className="text-sm text-gray-600">
+                                        {serie.peso || '0'} kg
+                                      </span>
+                                    ) : (
+                                <input
+                                  type="number"
+                                  min="0"
+                                        step="0.5"
+                                        value={serie.peso || ''}
+                                  onChange={(e) => {
+                                          if (serie.id) {
+                                            atualizarSerie(serie.id, { peso: Number(e.target.value) });
+                                          }
+                                        }}
+                                        onBlur={(e) => {
+                                          e.target.scrollIntoView(false);
+                                          window.scrollTo(0, window.scrollY);
+                                        }}
+                                        inputMode="decimal"
+                                        className="w-16 px-2 py-1.5 text-center border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                  placeholder="0"
+                                />
+                                    )}
+                                  </td>
+                                </tr>
+                                <tr className="bg-gray-50">
+                                  <td className="px-2 py-2 text-sm text-gray-600 font-medium text-center">Reps</td>
+                                  <td className="px-3 py-2 text-center">
+                                    <span className="text-sm text-blue-600">
+                                      {historicoSemanaAnterior[exercicioId]?.[serie.numero]?.repeticoes || '-'}
                                   </span>
-                                </td>
-                              </tr>
-                              <tr className="bg-gray-50">
-                                <td className="px-2 py-2 text-sm text-gray-600 font-medium text-center">Reps</td>
-                                <td className="px-3 py-2 text-center">
-                                  <span className="text-sm text-blue-600">
-                                    {historicoSemanaAnterior[exercicioId]?.[serie.numero]?.repeticoes || '-'}
-                                  </span>
-                                </td>
-                                <td className="px-3 py-2 text-center">
+                                  </td>
+                                  <td className="px-3 py-2 text-center">
+                                    {exercicio.tipo === 'COMP' && (serie.tipo === 'warm-up' || serie.tipo === 'feeder') ? (
+                              <span className="text-sm text-gray-600">
+                                        {serie.tipo === 'warm-up' ? '15' : '5'}
+                              </span>
+                                    ) : (
                                   <input
                                     type="number"
                                     min="0"
                                     max="999"
                                     value={repeticoesFeitas[exercicioId]?.[`serie-${serie.id}`] || ''}
                                     onChange={(e) => {
-                                      const value = e.target.value;
-                                      setRepeticoesFeitas(prev => ({
-                                        ...prev,
-                                        [exercicioId]: {
-                                          ...prev[exercicioId],
-                                          [`serie-${serie.id}`]: value
-                                        }
-                                      }));
+                                      atualizarRepeticoes(exercicioId, serie.id!, e.target.value);
                                     }}
                                     onBlur={(e) => {
                                       e.target.scrollIntoView(false);
@@ -760,27 +1264,34 @@ export default function TreinoPage() {
                                     className="w-16 px-2 py-1.5 text-center mx-auto border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                     placeholder="0"
                                   />
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                                </div>
+                              </div>
+                          </div>
+                    );
+                  })}
+                            </div>
 
-                <div className="mt-6 flex justify-center">
-                  <button
+                <div className="mt-6 flex flex-col items-center space-y-2">
+                          <button
                     onClick={() => registrarExecucao(exercicioId, seriesDoExercicio)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg text-sm transition-colors duration-200 flex items-center space-x-2"
+                    disabled={!repeticoesPreenchidas}
+                    className={`${
+                      repeticoesPreenchidas 
+                        ? 'bg-blue-600 hover:bg-blue-700' 
+                        : 'bg-gray-400 cursor-not-allowed'
+                    } text-white font-medium py-2 px-6 rounded-lg text-sm transition-colors duration-200 flex items-center space-x-2`}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <span>Registrar Execução</span>
-                  </button>
-                </div>
+                          </button>
+                        </div>
               </div>
             </div>
           );
@@ -795,6 +1306,17 @@ export default function TreinoPage() {
             setModalCargasOpen(false);
             setExercicioSelecionado(null);
             setCargas({});
+          }}
+        />
+      )}
+
+      {/* Modal de edição de exercício */}
+      {modalEditarExercicioOpen && exercicioParaEditar && (
+        <ModalEditarExercicio
+          exercicio={exercicioParaEditar}
+          onClose={() => {
+            setModalEditarExercicioOpen(false);
+            setExercicioParaEditar(null);
           }}
         />
       )}
