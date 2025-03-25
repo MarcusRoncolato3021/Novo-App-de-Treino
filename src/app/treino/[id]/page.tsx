@@ -6,6 +6,7 @@ import { db, Exercicio, Serie, TipoExecucao, TipoSerie, isDatabaseReady } from '
 import { useLiveQuery } from 'dexie-react-hooks';
 import Link from 'next/link';
 import type { HistoricoExercicio } from '@/lib/db';
+import { toast } from 'react-hot-toast';
 
 const diasDaSemana = [
   'Domingo',
@@ -36,12 +37,12 @@ export default function TreinoPage() {
   const [modalCargasOpen, setModalCargasOpen] = useState(false);
   const [exercicioSelecionado, setExercicioSelecionado] = useState<Exercicio | null>(null);
   const [cargas, setCargas] = useState<{[key: number]: number}>({});
-  const [historico, setHistorico] = useState<HistoricoExercicio[]>([]);
   const [modalEditarExercicioOpen, setModalEditarExercicioOpen] = useState(false);
   const [exercicioParaEditar, setExercicioParaEditar] = useState<Exercicio | null>(null);
   const [editarExercicioNome, setEditarExercicioNome] = useState('');
   const [editarRepeticoesMinimas, setEditarRepeticoesMinimas] = useState(8);
   const [editarRepeticoesMaximas, setEditarRepeticoesMaximas] = useState(12);
+  const [historico, setHistorico] = useState<HistoricoExercicio[]>([]);
 
   const treino = useLiveQuery(
     () => db.treinos.get(treinoId),
@@ -64,6 +65,27 @@ export default function TreinoPage() {
           .sortBy('ordem')
       : [],
     [exercicios]
+  );
+
+  const historicoExercicio = useLiveQuery(
+    async () => {
+      if (!exercicioSelecionado?.id) return [];
+      const registros = await db.historico
+        .where('exercicioId')
+        .equals(exercicioSelecionado.id)
+        .toArray();
+      
+      // Ordenar por data (mais recente primeiro) e ordem da série
+      return registros
+        .sort((a, b) => {
+          // Primeiro ordenar por data (mais recente primeiro)
+          const dateComparison = new Date(b.data).getTime() - new Date(a.data).getTime();
+          if (dateComparison !== 0) return dateComparison;
+          // Se for a mesma data, ordenar por ordem da série (1, 2, 3)
+          return a.ordem - b.ordem;
+        });
+    },
+    [exercicioSelecionado?.id]
   );
 
   // Buscar histórico da semana anterior para cada exercício
@@ -452,109 +474,92 @@ export default function TreinoPage() {
 
   const registrarExecucao = async (exercicioId: number, series: Serie[]) => {
     try {
-      if (!exercicioId) {
-        throw new Error('ID do exercício inválido');
-      }
-
+      console.log('Iniciando registro de execução:', { exercicioId, series });
+      
       // Verificar se o exercício existe
       const exercicio = await db.exercicios.get(exercicioId);
       if (!exercicio) {
-        throw new Error('Exercício não encontrado');
+        console.error('Exercício não encontrado:', exercicioId);
+        toast.error('Exercício não encontrado');
+        return;
       }
 
-      const data = new Date();
-      const historico: HistoricoExercicio[] = [];
+      console.log('Exercício encontrado:', exercicio);
 
-      // Para exercícios COMP, precisamos mapear corretamente as work sets
-      if (exercicio.tipo === 'COMP') {
-        // Filtrar apenas as work sets (séries 4, 5 e 6)
-        const workSets = series
-          .filter(s => s.tipo === 'work-set' && s.numero >= 4)
-          .sort((a, b) => a.numero - b.numero);
+      // Verificar se há séries para registrar
+      if (!series || series.length === 0) {
+        console.error('Nenhuma série encontrada para o exercício:', exercicioId);
+        toast.error('Nenhuma série encontrada para registrar');
+        return;
+      }
 
-        // Verificar se todas as work sets têm repetições preenchidas
-        const todasPreenchidas = workSets.every(serie => {
-          if (!serie.id) return false;
-          const repeticoesValue = repeticoesFeitas[exercicioId]?.[`serie-${serie.id}`];
-          return repeticoesValue && repeticoesValue.trim() !== '';
-        });
-
-        if (!todasPreenchidas) {
-          throw new Error('Por favor, preencha as repetições dos work sets antes de registrar');
-        }
-
-        // Registrar cada work set mantendo a ordem correta
-        workSets.forEach((serie) => {
-          if (!serie.id) return;
-
-          const repeticoesValue = repeticoesFeitas[exercicioId]?.[`serie-${serie.id}`];
-          if (repeticoesValue && repeticoesValue.trim() !== '') {
-            const repeticoes = Number(repeticoesValue);
-            
-            if (repeticoes > 0) {
-              historico.push({
-                id: Date.now() + Math.random(),
-        exercicioId,
-        data,
-                peso: serie.peso || 0,
-                repeticoes,
-                observacoes: observacoes[exercicioId] || '',
-                tipo: 'work-set',
-                ordem: serie.numero - 3 // Converte série 4, 5, 6 para 1, 2, 3
-              });
-            }
-          }
-        });
-
-        if (historico.length === 0) {
-          throw new Error('Nenhuma repetição válida para registrar');
-        }
-
-        // Registrar o histórico em uma única transação
-        await db.transaction('rw', [db.historico], async () => {
-      await db.historico.bulkAdd(historico);
-        });
-
-        // Atualizar estados após sucesso
-      setHistorico(prev => [...prev, ...historico]);
+      // Filtrar apenas work sets e ordenar por número
+      const workSets = series
+        .filter(s => s.tipo === 'work-set')
+        .sort((a, b) => a.numero - b.numero);
       
-        // Atualizar histórico da semana anterior
-        const novoHistoricoSemanaAnterior = { ...historicoSemanaAnterior };
-        if (!novoHistoricoSemanaAnterior[exercicioId]) {
-          novoHistoricoSemanaAnterior[exercicioId] = {};
-        }
+      console.log('Work sets encontrados:', workSets);
 
-        historico.forEach(registro => {
-          novoHistoricoSemanaAnterior[exercicioId][registro.ordem] = {
-            repeticoes: registro.repeticoes,
-            peso: registro.peso
-          };
-        });
-        
-        setHistoricoSemanaAnterior(novoHistoricoSemanaAnterior);
-        
-        // Limpar estados
-      setRepeticoesFeitas(prev => {
-          const novo = { ...prev };
-          delete novo[exercicioId];
-          return novo;
+      if (workSets.length === 0) {
+        console.error('Nenhum work set encontrado para o exercício:', exercicioId);
+        toast.error('Nenhum work set encontrado para registrar');
+        return;
+      }
+
+      // Verificar se todas as repetições foram preenchidas
+      const repeticoesPreenchidas = workSets.every(serie => {
+        const reps = repeticoesFeitas[exercicioId]?.[`serie-${serie.id}`];
+        return reps !== undefined && reps !== '';
       });
-      
-      setObservacoes(prev => {
-          const novo = { ...prev };
-          delete novo[exercicioId];
-          return novo;
-        });
 
-        alert('Execução registrada com sucesso!');
+      if (!repeticoesPreenchidas) {
+        console.error('Repetições não preenchidas para todas as séries');
+        toast.error('Preencha as repetições de todas as séries antes de registrar');
+        return;
       }
+
+      // Criar registros de histórico para cada work set na ordem correta
+      const historicos = workSets.map((serie, index) => {
+        const reps = Number(repeticoesFeitas[exercicioId][`serie-${serie.id}`]);
+        return {
+          id: Date.now() + Math.random(),
+          exercicioId,
+          data: new Date(),
+          repeticoes: reps,
+          peso: serie.peso || 0,
+          observacoes: observacoes[exercicioId] || '',
+          serieId: serie.id,
+          tipo: 'work-set' as TipoSerie,
+          ordem: index + 1 // Definir a ordem baseada no índice + 1 para garantir 1, 2, 3
+        };
+      });
+
+      console.log('Históricos a serem registrados:', historicos);
+
+      // Registrar todos os históricos em uma transação
+      await db.transaction('rw', [db.historico], async () => {
+        for (const historico of historicos) {
+          await db.historico.add(historico);
+        }
+      });
+
+      // Limpar os campos após o registro
+      setRepeticoesFeitas(prev => {
+        const novo = { ...prev };
+        delete novo[exercicioId];
+        return novo;
+      });
+      setObservacoes(prev => {
+        const novo = { ...prev };
+        delete novo[exercicioId];
+        return novo;
+      });
+
+      toast.success('Execução registrada com sucesso!');
+      console.log('Registro de execução concluído com sucesso');
     } catch (error) {
       console.error('Erro ao registrar execução:', error);
-      if (error instanceof Error) {
-        alert(`Erro ao registrar execução: ${error.message}`);
-      } else {
-      alert('Erro ao registrar execução. Tente novamente.');
-      }
+      toast.error('Erro ao registrar execução');
     }
   };
 
@@ -574,7 +579,8 @@ export default function TreinoPage() {
         tipo: 'work-set' as TipoSerie,
         numero: numeroAtual + 1,
         repeticoes: 0,
-        peso: series?.find(s => s.exercicioId === exercicioId)?.peso || 0
+        peso: series?.find(s => s.exercicioId === exercicioId)?.peso || 0,
+        ordem: numeroAtual + 1
       };
 
       console.log('Adicionando nova série:', novaSerie);
@@ -1151,21 +1157,24 @@ export default function TreinoPage() {
                 </div>
 
                     <div className="space-y-3">
-                  {seriesDoExercicio.slice(0, exercicio.tipo === 'COMP' ? 6 : undefined).map((serie) => {
-                    let nomeSerie = '';
-                    if (exercicio.tipo === 'COMP') {
-                      if (serie.numero === 1) {
-                        nomeSerie = 'Warm Up';
-                      } else if (serie.numero === 2 || serie.numero === 3) {
-                        nomeSerie = `Feeder ${serie.numero - 1}`;
-                      } else if (serie.numero <= 6) {
-                        nomeSerie = `Work Set ${serie.numero - 3}`;
+                  {seriesDoExercicio
+                    .slice(0, exercicio.tipo === 'COMP' ? 6 : undefined)
+                    .sort((a, b) => a.numero - b.numero)
+                    .map((serie) => {
+                      let nomeSerie = '';
+                      if (exercicio.tipo === 'COMP') {
+                        if (serie.numero === 1) {
+                          nomeSerie = 'Warm Up';
+                        } else if (serie.numero === 2 || serie.numero === 3) {
+                          nomeSerie = `Feeder ${serie.numero - 1}`;
+                        } else if (serie.numero <= 6) {
+                          nomeSerie = `Work Set ${serie.numero - 3}`;
+                        }
+                      } else {
+                        nomeSerie = `Work Set ${serie.numero}`;
                       }
-                    } else {
-                      nomeSerie = `Work Set ${serie.numero}`;
-                    }
 
-                    return (
+                      return (
                         <div
                           key={serie.id}
                         className="bg-gray-50 rounded-lg border border-gray-100 hover:border-blue-200 transition-colors p-4"

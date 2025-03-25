@@ -31,6 +31,7 @@ export interface Serie {
   numero: number;
   repeticoes: number;
   peso: number;
+  ordem: number;
 }
 
 export type HistoricoExercicio = {
