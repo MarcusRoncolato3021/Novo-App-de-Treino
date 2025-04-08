@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, TouchEvent } from 'react';
+import React, { useState, useEffect, useRef, TouchEvent, Suspense } from 'react';
 import { db, FotoProgresso } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Link from 'next/link';
@@ -15,7 +15,8 @@ const tiposFoto = [
   { id: 'lado_direito', nome: 'Lado Dir.', icone: '👤' }
 ];
 
-export default function FotosPage() {
+// Componente interno que usa useSearchParams
+function FotosContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const isFromRelatorio = searchParams.get('origem') === 'relatorio';
@@ -664,5 +665,19 @@ export default function FotosPage() {
         </div>
       </nav>
     </div>
+  );
+}
+
+// Componente principal com Suspense
+export default function FotosPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500 mb-4"></div>
+        <p className="text-gray-600">Carregando...</p>
+      </div>
+    }>
+      <FotosContent />
+    </Suspense>
   );
 } 
