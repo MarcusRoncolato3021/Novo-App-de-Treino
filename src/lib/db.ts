@@ -2,98 +2,149 @@
 
 import Dexie, { Table } from 'dexie';
 
-export type TipoExecucao = 'SIMP' | 'COMP';
 export type TipoSerie = 'warm-up' | 'feeder' | 'work-set';
-
-export interface Treino {
-  id?: number;
-  nome: string;
-  diaDaSemana?: number;
-}
-
-export interface Exercicio {
-  id?: number;
-  nome: string;
-  tipo: 'SIMP' | 'COMP';
-  tipoExecucao: TipoExecucao;
-  ordem: number;
-  numeroWorkSets: number;
-  repeticoesMinimas: number;
-  repeticoesMaximas: number;
-  treinoId: number;
-  observacoes?: string;
-}
+export type TipoExecucao = 'COMP' | 'SIMP';
 
 export interface Serie {
   id?: number;
   exercicioId: number;
-  tipo: TipoSerie;
   numero: number;
-  repeticoes: number;
   peso: number;
+  tipo: TipoSerie;
+}
+
+export interface Exercicio {
+  id?: number;
+  treinoId: number;
+  nome: string;
+  tipoExecucao: TipoExecucao;
+  numeroWorkSets: number;
+  metaMin: number;
+  metaMax: number;
   ordem: number;
 }
 
-export type HistoricoExercicio = {
-  id: number;
+export interface Treino {
+  id?: number;
+  data: Date;
+  musculo: string;
+  series?: number;
+  carga?: number;
+  repeticoes?: number;
+  observacoes?: string;
+  diaDaSemana?: number;
+  nome?: string;
+  categoria?: string;
+}
+
+export interface HistoricoExercicio {
+  id?: number;
   exercicioId: number;
   data: Date;
-  peso: number;
   repeticoes: number;
-  observacoes: string;
+  peso: number;
   tipo: TipoSerie;
   ordem: number;
-};
-
-export interface Categoria {
-  id?: number;
-  nome: string;
-  descricao?: string;
+  observacoes: string;
 }
 
 export interface Cardio {
   id?: number;
-  treinoId: number;
-  nome: string;
-  duracao: number;
-  intensidade: 'baixa' | 'media' | 'alta';
   data: Date;
+  tipo: string;
+  duracao: number;
+  nivelBicicleta?: number;
+  intensidade?: number;
   observacoes?: string;
 }
 
-export interface CardioHistorico {
+export interface FotoProgresso {
   id?: number;
-  cardioId: number;
   data: Date;
-  duracao: number;
-  intensidade: 'baixa' | 'media' | 'alta';
+  frente: string | null;
+  costas: string | null;
+  lateralEsquerda: string | null;
+  lateralDireita: string | null;
+  peso: number;
   observacoes?: string;
 }
 
-export class TreinoDatabase extends Dexie {
-  treinos!: Table<Treino>;
+export interface HistoricoTreino {
+  id?: number;
+  treinoId: number;
+  data: Date;
+  exerciciosCompletos: number;
+  exerciciosTotal: number;
+  exercicios: {
+    id: number;
+    nome: string;
+    series: {
+      repeticoes: number;
+      peso: number;
+    }[];
+  }[];
+}
+
+export interface Foto {
+  id?: number;
+  data: Date;
+  url: string;
+  descricao?: string;
+  tipo?: 'frente' | 'costas' | 'lado_esquerdo' | 'lado_direito';
+  peso?: number;
+}
+
+export interface TreinoRealizado {
+  data: Date;
+  tipo: string;
+}
+
+export interface RelatorioSemanal {
+  id?: number;
+  data: Date;
+  dietaSemanal: string;
+  calorias?: number;
+  treinos?: TreinoRealizado[];
+  fotoIds?: number[];
+}
+
+export class AppDatabase extends Dexie {
+  treinos: Dexie.Table<Treino, number>;
   exercicios!: Table<Exercicio>;
   series!: Table<Serie>;
-  categorias!: Table<Categoria>;
-  cardio!: Table<Cardio>;
-  cardioHistorico!: Table<CardioHistorico>;
   historico!: Table<HistoricoExercicio>;
+  cardio: Dexie.Table<Cardio, number>;
+  fotosProgresso!: Table<FotoProgresso>;
+  historicoTreinos!: Table<HistoricoTreino>;
+  fotos: Dexie.Table<Foto, number>;
+  relatorios: Dexie.Table<RelatorioSemanal, number>;
 
   constructor() {
-    super('TreinoDatabase');
-    this.version(2).stores({
-      treinos: '++id, nome, diaDaSemana',
-      exercicios: '++id, treinoId, nome, tipoExecucao, ordem',
-      series: '++id, exercicioId, tipo, numero',
-      categorias: '++id',
-      cardio: '++id, treinoId, nome, data',
-      cardioHistorico: '++id, cardioId, data',
-      historico: '++id, exercicioId, data'
+    super('AppTreino');
+    
+    // Versão completamente nova - 10
+    // Deletamos o banco existente completamente e recriamos
+    this.version(10).stores({
+      treinos: '++id, data, musculo, diaDaSemana',
+      exercicios: '++id, treinoId, nome, tipoExecucao, numeroWorkSets, metaMin, metaMax',
+      series: '++id, exercicioId, numero, peso, tipo',
+      historico: '++id, exercicioId, data, repeticoes, peso, tipo, ordem, observacoes, [exercicioId+data]',
+      cardio: '++id, data, tipo',
+      fotosProgresso: '++id, data, peso',
+      historicoTreinos: '++id, treinoId, data, exerciciosCompletos, exerciciosTotal, exercicios',
+      fotos: '++id, data, url, tipo, peso',
+      relatorios: '++id, data'
     });
+    
+    // Define tipos para as tabelas
+    this.treinos = this.table('treinos');
+    this.cardio = this.table('cardio');
+    this.fotos = this.table('fotos');
+    this.relatorios = this.table('relatorios');
   }
 }
 
-export const db = new TreinoDatabase();
+export const db = new AppDatabase();
 
 // Função para verificar se o IndexedDB está disponível
 const checkIndexedDB = () => {

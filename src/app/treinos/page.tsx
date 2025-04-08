@@ -194,7 +194,7 @@ function TreinosContent() {
                         <div className="flex items-center space-x-1">
                           <span className="text-gray-500">Meta:</span>
                           <span className="font-medium text-gray-800">
-                            {exercicio.repeticoesMinimas}-{exercicio.repeticoesMaximas}
+                            {exercicio.metaMin}-{exercicio.metaMax}
                           </span>
                           <span className="text-gray-500">reps</span>
                         </div>

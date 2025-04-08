@@ -1,11 +1,10 @@
+/** @type {import('next').NextConfig} */
 const withPWA = require('next-pwa')({
   dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
   register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development'
 })
 
-/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
@@ -20,7 +19,24 @@ const nextConfig = {
       }
     }
     return config
-  }
+  },
+  // Configurações de performance
+  experimental: {
+    optimizeCss: true,
+    optimizePackageImports: ['@heroicons/react', 'react-hot-toast'],
+    serverComponentsExternalPackages: ['dexie']
+  },
+  // Configurações de TypeScript
+  typescript: {
+    ignoreBuildErrors: false
+  },
+  // Configurações de compilação
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production'
+  },
+  // Configurações adicionais
+  poweredByHeader: false,
+  compress: true
 }
 
 module.exports = withPWA(nextConfig) 
