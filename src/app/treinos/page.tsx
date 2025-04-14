@@ -24,7 +24,7 @@ interface EditarCargasModalProps {
 
 function TreinosContent() {
   const searchParams = useSearchParams();
-  const categoria = searchParams.get('categoria') || 'superiores';
+  const categoria = searchParams?.get('categoria') || 'superiores';
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedExercicio, setSelectedExercicio] = useState<Exercicio | null>(null);
 

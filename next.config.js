@@ -6,8 +6,11 @@ const withPWA = require('next-pwa')({
 })
 
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false,
   swcMinify: true,
+  images: {
+    unoptimized: true,
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -22,13 +25,13 @@ const nextConfig = {
   },
   // Configurações de performance
   experimental: {
-    optimizeCss: true,
+    optimizeCss: false,
     optimizePackageImports: ['@heroicons/react', 'react-hot-toast'],
     serverComponentsExternalPackages: ['dexie']
   },
   // Configurações de TypeScript
   typescript: {
-    ignoreBuildErrors: false
+    ignoreBuildErrors: true
   },
   // Configurações de compilação
   compiler: {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Link from 'next/link';
@@ -34,10 +34,83 @@ export default function Home() {
   const [diaSelecionado, setDiaSelecionado] = useState(1);
   const [busca, setBusca] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
+  const [progressoTreinos, setProgressoTreinos] = useState<{[key: number]: {completos: number, total: number}}>({});
 
   const treinos = useLiveQuery(
     () => db.treinos.orderBy('diaDaSemana').toArray()
   );
+
+  // Filtrar treinos com base na busca
+  const treinosFiltrados = React.useMemo(() => {
+    if (!treinos) return [];
+    if (!busca.trim()) return treinos;
+    
+    const termoBusca = busca.toLowerCase().trim();
+    return treinos.filter(treino => 
+      treino.nome?.toLowerCase().includes(termoBusca) || 
+      diasDaSemana[treino.diaDaSemana !== undefined ? treino.diaDaSemana % 7 : 0]
+        .toLowerCase().includes(termoBusca)
+    );
+  }, [treinos, busca]);
+
+  // Filtrar treinos para "Seu treino de hoje"
+  const treinosDeHoje = React.useMemo(() => {
+    if (!treinosFiltrados) return [];
+    const diaAtual = new Date().getDay();
+    return treinosFiltrados.filter(t => t.diaDaSemana === diaAtual);
+  }, [treinosFiltrados]);
+
+  // Buscar exercícios para cada treino e verificar quais foram completados hoje
+  useEffect(() => {
+    const calcularProgresso = async () => {
+      if (!treinos || treinos.length === 0) return;
+      
+      const dataAtual = new Date();
+      dataAtual.setHours(0, 0, 0, 0);
+      
+      const progresso: {[key: number]: {completos: number, total: number}} = {};
+      
+      for (const treino of treinos) {
+        if (!treino.id) continue;
+        
+        // Buscar todos os exercícios deste treino
+        const exercicios = await db.exercicios
+          .where('treinoId')
+          .equals(treino.id)
+          .toArray();
+        
+        const total = exercicios.length;
+        let completos = 0;
+        
+        // Para cada exercício, verificar se foi completado hoje
+        for (const exercicio of exercicios) {
+          if (!exercicio.id) continue;
+          
+          // Buscar registros de histórico deste exercício na data de hoje
+          const registrosHoje = await db.historico
+            .where('exercicioId')
+            .equals(exercicio.id)
+            .filter(registro => {
+              const dataRegistro = new Date(registro.data);
+              dataRegistro.setHours(0, 0, 0, 0);
+              return dataRegistro.getTime() === dataAtual.getTime();
+            })
+            .count();
+          
+          // Se houver pelo menos um registro hoje, o exercício foi completado
+          if (registrosHoje > 0) {
+            completos++;
+          }
+        }
+        
+        progresso[treino.id] = { completos, total };
+      }
+      
+      setProgressoTreinos(progresso);
+    };
+    
+    calcularProgresso();
+  }, [treinos]);
 
   const abrirModal = () => {
     setModalAberto(true);
@@ -133,13 +206,18 @@ export default function Home() {
             ({diasDaSemana[new Date().getDay() % 7]})
           </span>
         </h2>
-        {treinos && treinos.filter(t => t.diaDaSemana === new Date().getDay()).length === 0 ? (
+        {treinosDeHoje.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-md p-6 mb-6 text-center">
-            <p className="text-gray-600">Nenhum treino programado para hoje</p>
+            <p className="text-gray-600">
+              {busca.trim() 
+                ? "Nenhum treino encontrado para a busca" 
+                : "Nenhum treino programado para hoje"}
+            </p>
             <button 
               onClick={() => {
                 setDiaSelecionado(new Date().getDay());
                 setNovoTreinoNome('');
+                setModalAberto(true);
               }}
               className="mt-4 bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors duration-300 transform hover:scale-105"
             >
@@ -147,27 +225,47 @@ export default function Home() {
             </button>
           </div>
         ) : (
-          treinos && treinos.filter(t => t.diaDaSemana === new Date().getDay()).map((treino) => (
+          treinosDeHoje.map((treino) => (
             <Link
               key={treino.id}
               href={`/treino/${treino.id}`}
               className="bg-white rounded-2xl shadow-md p-4 mb-6 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 block"
             >
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-lg text-primary-700">{treino.nome}</h3>
-                <span className="bg-primary-100 text-primary-800 px-2 py-1 rounded-lg text-sm font-medium">
+              <div className="flex items-center mb-3">
+                <span className="bg-primary-100 text-primary-800 px-2 py-1 rounded-lg text-xs font-medium mr-4 whitespace-nowrap min-w-[100px] text-center">
                   {diasDaSemana[treino.diaDaSemana !== undefined ? treino.diaDaSemana % 7 : 0]}
                 </span>
+                <h3 className="font-bold text-xl text-primary-700 text-center flex-1 mx-auto">{treino.nome}</h3>
+                <div className="min-w-[30px]"></div>
               </div>
               <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="h-2 w-32 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full w-3/4 bg-primary-600 rounded-full"></div>
+                <div className="flex flex-col w-full mr-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-gray-700">Progresso</span>
+                    <span className="text-sm font-medium text-primary-600">
+                      {treino.id && progressoTreinos[treino.id] 
+                        ? `${Math.round((progressoTreinos[treino.id].completos / Math.max(1, progressoTreinos[treino.id].total)) * 100)}%`
+                        : '0%'}
+                    </span>
                   </div>
-                  <span className="ml-2 text-sm text-gray-600">75% concluído</span>
+                  <div className="h-3 w-full bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary-600 rounded-full transition-all duration-500 ease-in-out" 
+                      style={{ 
+                        width: treino.id && progressoTreinos[treino.id] 
+                          ? `${(progressoTreinos[treino.id].completos / Math.max(1, progressoTreinos[treino.id].total)) * 100}%` 
+                          : '0%' 
+                      }}
+                    ></div>
+                  </div>
+                  <span className="text-xs mt-1 text-gray-500">
+                    {treino.id && progressoTreinos[treino.id] 
+                      ? `${progressoTreinos[treino.id].completos}/${progressoTreinos[treino.id].total} exercícios concluídos` 
+                      : 'Nenhum exercício concluído'}
+                  </span>
                 </div>
                 <button className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors duration-300 transform hover:scale-105">
-                  Iniciar treino
+                  Iniciar
                 </button>
               </div>
             </Link>
@@ -204,47 +302,56 @@ export default function Home() {
       <section className="px-6 py-2">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-800">Seus treinos</h2>
-          <button className="text-primary-600 font-medium hover:text-primary-800 transition-colors duration-300">
-            Ver todos
-          </button>
+          {busca.trim() && <span className="text-sm text-gray-500">Resultados para: "{busca}"</span>}
+          {!busca.trim() && (
+            <button className="text-primary-600 font-medium hover:text-primary-800 transition-colors duration-300">
+              Ver todos
+            </button>
+          )}
         </div>
-        <div className="space-y-4">
-          {treinos && treinos.map((treino) => (
-            <Link
-              key={treino.id}
-              href={`/treino/${treino.id}`}
-              className="block bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300"
-            >
-              <div className="flex items-center">
-                <div className="bg-primary-100 rounded-lg p-3 mr-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-800">{treino.nome}</h3>
-                  <p className="text-sm text-gray-500">{diasDaSemana[treino.diaDaSemana !== undefined ? treino.diaDaSemana % 7 : 0]}</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      treino.id && excluirTreino(treino.id);
-                    }}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        {treinosFiltrados.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            Nenhum treino encontrado para "{busca}"
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {treinosFiltrados.map((treino) => (
+              <Link
+                key={treino.id}
+                href={`/treino/${treino.id}`}
+                className="block bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300"
+              >
+                <div className="flex items-center">
+                  <div className="bg-primary-100 rounded-lg p-3 mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                     </svg>
-                  </button>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                  </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-800">{treino.nome}</h3>
+                    <p className="text-sm text-gray-500">{diasDaSemana[treino.diaDaSemana !== undefined ? treino.diaDaSemana % 7 : 0]}</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        treino.id && excluirTreino(treino.id);
+                      }}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Modal de Novo Treino */}
@@ -330,7 +437,7 @@ export default function Home() {
           </Link>
           <Link href="/relatorio" className="flex flex-col items-center justify-center p-2 hover:text-primary-600 transition-colors duration-300">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <span className="text-xs mt-1 font-medium text-gray-500">Relatório</span>
           </Link>

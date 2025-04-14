@@ -1,0 +1,1 @@
+export type TipoSerie = 'warm-up' | 'feeder' | 'work-set'; 

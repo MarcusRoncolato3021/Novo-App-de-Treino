@@ -10,8 +10,22 @@ import { toast } from 'react-hot-toast';
 export default function HistoricoPage() {
   const params = useParams();
   const router = useRouter();
-  const exercicioId = Number(params.id);
+  const exercicioId = params?.id ? Number(params.id) : 0;
   const [isLimpando, setIsLimpando] = useState(false);
+
+  if (!exercicioId) {
+    return (
+      <div className="min-h-screen bg-blue-50">
+        <div className="container mx-auto px-4 py-6">
+          <div className="bg-white rounded-3xl p-6">
+            <div className="flex items-center justify-center">
+              <span className="text-gray-600">ID do exercício inválido</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const exercicio = useLiveQuery(
     () => db.exercicios.get(exercicioId),

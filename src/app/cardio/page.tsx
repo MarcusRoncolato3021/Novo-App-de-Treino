@@ -4,19 +4,19 @@ import React, { useState } from 'react';
 import { db, Cardio } from '@/lib/db';
 import Link from 'next/link';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useRouter } from 'next/navigation';
 
 export default function CardioPage() {
   const [exercicio, setExercicio] = useState('');
   const [duracao, setDuracao] = useState('');
   const [nivelBike, setNivelBike] = useState('');
   const [intensidade, setIntensidade] = useState<'baixa' | 'media' | 'alta'>('media');
+  const [carregando, setCarregando] = useState(false);
+
+  const router = useRouter();
 
   const historicoRecente = useLiveQuery<Cardio[]>(
-    () => db.cardio
-      .orderBy('data')
-      .reverse()
-      .limit(3)
-      .toArray()
+    () => db.cardio.orderBy('data').reverse().limit(5).toArray()
   ) || [];
 
   const tiposExercicios = [
@@ -32,11 +32,7 @@ export default function CardioPage() {
   ];
 
   const formatarData = (data: Date) => {
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(data);
+    return data.toLocaleDateString('pt-BR');
   };
 
   const salvarExercicio = async () => {
@@ -51,6 +47,7 @@ export default function CardioPage() {
     }
 
     try {
+      setCarregando(true);
       const novoExercicio: Cardio = {
         tipo: exercicio,
         duracao: parseInt(duracao),
@@ -68,7 +65,13 @@ export default function CardioPage() {
     } catch (error) {
       console.error('Erro ao salvar exercício:', error);
       alert('Erro ao salvar exercício. Tente novamente.');
+    } finally {
+      setCarregando(false);
     }
+  };
+
+  const irParaHistorico = () => {
+    router.push('/cardio/historico');
   };
 
   return (
@@ -191,12 +194,40 @@ export default function CardioPage() {
                 </div>
               </div>
 
-              <button
-                onClick={salvarExercicio}
-                className="w-full bg-primary-600 text-white py-4 rounded-xl font-semibold text-lg hover:bg-primary-700 transition-colors duration-300 shadow-sm"
-              >
-                Salvar Exercício
-              </button>
+              <div className="flex justify-center gap-4 mt-6">
+                <button
+                  onClick={irParaHistorico}
+                  className="w-48 flex justify-center items-center py-3 px-4 border border-blue-500 text-sm font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Histórico
+                </button>
+
+                <button
+                  onClick={salvarExercicio}
+                  disabled={carregando}
+                  className="w-48 flex justify-center items-center py-3 px-4 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed"
+                >
+                  {carregando ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Salvar
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 

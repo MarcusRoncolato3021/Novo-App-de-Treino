@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Classes de rotação para imagens */
+.rotate-90 {
+  transform: rotate(90deg);
+}
+
+.rotate-180 {
+  transform: rotate(180deg);
+}
+
+.rotate-270 {
+  transform: rotate(270deg);
+}
+
 /* Esconder scrollbar para Chrome, Safari e Opera */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { db, Cardio } from '@/lib/db';
+import { db } from '@/lib/db';
 import Link from 'next/link';
 import { useLiveQuery } from 'dexie-react-hooks';
 
@@ -16,11 +16,7 @@ export default function HistoricoCardio() {
   );
 
   const formatarData = (data: Date) => {
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(data);
+    return data.toLocaleDateString('pt-BR');
   };
 
   const toggleDate = (date: string) => {
@@ -38,7 +34,7 @@ export default function HistoricoCardio() {
     }
     acc[data].push(exercicio);
     return acc;
-  }, {} as Record<string, Array<Cardio>>) || {};
+  }, {} as Record<string, typeof historicoCardio>) || {};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 pb-24">

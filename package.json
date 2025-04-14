@@ -12,8 +12,10 @@
     "@emotion/react": "^11.14.0",
     "@mantine/core": "^7.17.2",
     "@mantine/hooks": "^7.17.2",
+    "@types/react-datepicker": "^6.2.0",
     "autoprefixer": "^10.4.17",
     "critters": "^0.0.23",
+    "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "dexie": "^4.0.11",
     "dexie-react-hooks": "^1.1.7",
@@ -23,6 +25,7 @@
     "next-pwa": "^5.6.0",
     "postcss": "^8.4.35",
     "react": "^18.2.0",
+    "react-datepicker": "^8.3.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.5.2",
     "tailwindcss": "^3.4.1"

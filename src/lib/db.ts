@@ -103,9 +103,12 @@ export interface RelatorioSemanal {
   id?: number;
   data: Date;
   dietaSemanal: string;
+  comentarioTreino?: string;
   calorias?: number;
+  peso?: number;
   treinos?: TreinoRealizado[];
   fotoIds?: number[];
+  fotos?: string[];
 }
 
 export class AppDatabase extends Dexie {

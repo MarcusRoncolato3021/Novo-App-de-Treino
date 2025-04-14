@@ -2,17 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { db, Exercicio, Serie, TipoSerie, TipoExecucao } from '@/lib/db';
+import { db, Exercicio, Serie, TipoExecucao } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { TipoSerie } from '@/types/serie';
 
 interface HistoricoRegistro {
-  id?: number;
+  id: number;
   exercicioId: number;
   data: Date;
   tipo: TipoSerie;
-  ordem: number;
   peso: number;
   repeticoes: number;
 }
@@ -20,6 +20,11 @@ interface HistoricoRegistro {
 export default function ExercicioPage() {
   const params = useParams();
   const router = useRouter();
+  
+  if (!params?.id) {
+    return <div>Parâmetros inválidos</div>;
+  }
+
   const exercicioId = Number(params.id);
   const [repeticoes, setRepeticoes] = useState<{[key: number]: number}>({});
   const [isRegistrando, setIsRegistrando] = useState(false);

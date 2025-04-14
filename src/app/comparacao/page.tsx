@@ -115,16 +115,26 @@ export default function Comparacao() {
     return url;
   };
 
-  const formatarData = (dataString: string) => {
-    const data = new Date(dataString);
-    // Ajustar para o fuso horário local
-    data.setMinutes(data.getMinutes() + data.getTimezoneOffset());
+  const getImageOrientation = (tipo: string) => {
+    switch (tipo) {
+      case 'frente':
+      case 'costas':
+        return 'rotate-0';
+      case 'lado_esquerdo':
+      case 'lado_direito':
+        return 'rotate-90';
+      default:
+        return 'rotate-0';
+    }
+  };
+
+  function formatarData(data: Date): string {
     return data.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
     });
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 pb-24">
@@ -179,7 +189,7 @@ export default function Comparacao() {
                   <option value="">Selecione uma data</option>
                   {datasDisponiveis.map((data, index) => (
                     <option key={`antes-${data}-${index}`} value={data}>
-                      {formatarData(data)}
+                      {formatarData(new Date(data))}
                     </option>
                   ))}
                 </select>
@@ -196,7 +206,7 @@ export default function Comparacao() {
                   <option value="">Selecione uma data</option>
                   {datasDisponiveis.map((data, index) => (
                     <option key={`depois-${data}-${index}`} value={data}>
-                      {formatarData(data)}
+                      {formatarData(new Date(data))}
                     </option>
                   ))}
                 </select>
@@ -207,7 +217,7 @@ export default function Comparacao() {
               <div className="space-y-2">
                 <div className="flex justify-center items-center">
                   <h3 className="text-lg font-semibold text-gray-800 text-center">
-                    {dataAntes ? formatarData(dataAntes) : 'Selecione uma data'}
+                    {dataAntes ? formatarData(new Date(dataAntes)) : 'Selecione uma data'}
                   </h3>
                   {fotoAntes && (
                     <div className="text-sm font-medium text-gray-600 ml-2">
@@ -220,7 +230,7 @@ export default function Comparacao() {
                     <img
                       src={getUrlFoto(fotoAntes, tipoSelecionado) || ''}
                       alt="Foto antes"
-                      className="w-full h-full object-cover"
+                      className={`w-full h-full object-cover ${getImageOrientation(tipoSelecionado)}`}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400 text-center">
@@ -233,7 +243,7 @@ export default function Comparacao() {
               <div className="space-y-2">
                 <div className="flex justify-center items-center">
                   <h3 className="text-lg font-semibold text-gray-800 text-center">
-                    {dataDepois ? formatarData(dataDepois) : 'Selecione uma data'}
+                    {dataDepois ? formatarData(new Date(dataDepois)) : 'Selecione uma data'}
                   </h3>
                   {fotoDepois && (
                     <div className="text-sm font-medium text-gray-600 ml-2">
@@ -246,7 +256,7 @@ export default function Comparacao() {
                     <img
                       src={getUrlFoto(fotoDepois, tipoSelecionado) || ''}
                       alt="Foto depois"
-                      className="w-full h-full object-cover"
+                      className={`w-full h-full object-cover ${getImageOrientation(tipoSelecionado)}`}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400 text-center">
@@ -278,7 +288,7 @@ export default function Comparacao() {
           <div className="flex justify-between items-center p-4 bg-black/80 backdrop-blur-sm">
             <div className="flex items-center gap-4">
               <h2 className="text-white font-semibold">
-                {dataAntes ? formatarData(dataAntes) : ''} vs {dataDepois ? formatarData(dataDepois) : ''}
+                {dataAntes ? formatarData(new Date(dataAntes)) : ''} vs {dataDepois ? formatarData(new Date(dataDepois)) : ''}
               </h2>
               <div className="text-white/80 text-sm">
                 {fotoAntes?.peso} kg vs {fotoDepois?.peso} kg
@@ -301,7 +311,7 @@ export default function Comparacao() {
                   <img
                     src={getUrlFoto(fotoAntes, tipoSelecionado) || ''}
                     alt="Foto antes"
-                    className="absolute inset-0 w-full h-full object-contain bg-black"
+                    className={`absolute inset-0 w-full h-full object-contain bg-black ${getImageOrientation(tipoSelecionado)}`}
                   />
                   <div className="absolute top-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
                     Antes - {fotoAntes?.peso}kg
@@ -311,7 +321,7 @@ export default function Comparacao() {
                   <img
                     src={getUrlFoto(fotoDepois, tipoSelecionado) || ''}
                     alt="Foto depois"
-                    className="absolute inset-0 w-full h-full object-contain bg-black"
+                    className={`absolute inset-0 w-full h-full object-contain bg-black ${getImageOrientation(tipoSelecionado)}`}
                   />
                   <div className="absolute top-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
                     Depois - {fotoDepois?.peso}kg
@@ -345,7 +355,7 @@ export default function Comparacao() {
           </Link>
           <Link href="/relatorio" className="flex flex-col items-center justify-center p-2 hover:text-primary-600 transition-colors duration-300">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <span className="text-xs mt-1 font-medium text-gray-500">Relatório</span>
           </Link>

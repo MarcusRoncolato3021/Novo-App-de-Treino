@@ -9,7 +9,7 @@ import { toast } from 'react-hot-toast';
 export default function AdicionarExercicioPage() {
   const params = useParams();
   const router = useRouter();
-  const treinoId = Number(params.id);
+  const treinoId = params?.id ? Number(params.id) : 0;
   
   const [nome, setNome] = useState('');
   const [tipo, setTipo] = useState<TipoExecucao>('SIMP');
