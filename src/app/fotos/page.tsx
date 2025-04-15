@@ -15,6 +15,15 @@ const tiposFoto = [
   { id: 'lado_direito', nome: 'Lado Dir.', icone: '👤' }
 ];
 
+// Componente principal exportado
+export default function Fotos() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center"><p>Carregando...</p></div>}>
+      <FotosContent />
+    </Suspense>
+  );
+}
+
 // Componente interno que usa useSearchParams
 function FotosContent() {
   const searchParams = useSearchParams();
@@ -718,5 +727,3 @@ function FotosContent() {
     </div>
   );
 }
-
-export default FotosContent;
