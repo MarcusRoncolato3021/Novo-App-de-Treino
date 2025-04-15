@@ -35,6 +35,7 @@ export interface Treino {
   diaDaSemana?: number;
   nome?: string;
   categoria?: string;
+  ativo?: boolean;
 }
 
 export interface HistoricoExercicio {
@@ -125,10 +126,10 @@ export class AppDatabase extends Dexie {
   constructor() {
     super('AppTreino');
     
-    // Versão completamente nova - 10
-    // Deletamos o banco existente completamente e recriamos
-    this.version(10).stores({
-      treinos: '++id, data, musculo, diaDaSemana',
+    // Versão completamente nova - 11
+    // Adicionamos o campo ativo aos treinos
+    this.version(11).stores({
+      treinos: '++id, data, musculo, diaDaSemana, ativo',
       exercicios: '++id, treinoId, nome, tipoExecucao, numeroWorkSets, metaMin, metaMax',
       series: '++id, exercicioId, numero, peso, tipo',
       historico: '++id, exercicioId, data, repeticoes, peso, tipo, ordem, observacoes, [exercicioId+data]',

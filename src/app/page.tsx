@@ -1,17 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { db } from '@/lib/db';
+import { db, Treino } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-
-interface Treino {
-  id?: number;
-  nome: string;
-  diaDaSemana: number;
-  categoria: string;
-}
+import Navbar from '@/components/Navbar';
 
 const diasDaSemana = [
   'Domingo',
@@ -37,7 +31,9 @@ export default function Home() {
   const [progressoTreinos, setProgressoTreinos] = useState<{[key: number]: {completos: number, total: number}}>({});
 
   const treinos = useLiveQuery(
-    () => db.treinos.orderBy('diaDaSemana').toArray()
+    () => db.treinos
+      .filter(treino => treino.ativo !== false)
+      .sortBy('diaDaSemana')
   );
 
   // Filtrar treinos com base na busca
@@ -46,7 +42,7 @@ export default function Home() {
     if (!busca.trim()) return treinos;
     
     const termoBusca = busca.toLowerCase().trim();
-    return treinos.filter(treino => 
+    return treinos.filter((treino: Treino) => 
       treino.nome?.toLowerCase().includes(termoBusca) || 
       diasDaSemana[treino.diaDaSemana !== undefined ? treino.diaDaSemana % 7 : 0]
         .toLowerCase().includes(termoBusca)
@@ -57,7 +53,7 @@ export default function Home() {
   const treinosDeHoje = React.useMemo(() => {
     if (!treinosFiltrados) return [];
     const diaAtual = new Date().getDay();
-    return treinosFiltrados.filter(t => t.diaDaSemana === diaAtual);
+    return treinosFiltrados.filter((t: Treino) => t.diaDaSemana === diaAtual);
   }, [treinosFiltrados]);
 
   // Buscar exercícios para cada treino e verificar quais foram completados hoje
@@ -134,7 +130,8 @@ export default function Home() {
         diaDaSemana: novoTreino.diaDaSemana,
         categoria: novoTreino.categoria,
         data: new Date(),
-        musculo: novoTreino.categoria
+        musculo: novoTreino.categoria,
+        ativo: true // Novo treino sempre é criado como ativo
       });
       setNovoTreinoNome('');
       setModalAberto(false);
@@ -166,24 +163,34 @@ export default function Home() {
     await db.treinos.delete(treinoId);
   };
 
+  // Nova função para alternar status do treino
+  const alternarStatusTreino = async (e: React.MouseEvent, treinoId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      // Buscar o status atual do treino
+      const treino = await db.treinos.get(treinoId);
+      const novoStatus = !(treino?.ativo);
+      
+      await db.treinos.update(treinoId, { ativo: novoStatus });
+      toast.success(`Treino ${novoStatus ? 'ativado' : 'inativado'} com sucesso!`);
+    } catch (error) {
+      console.error('Erro ao alterar status do treino:', error);
+      toast.error('Erro ao alterar status do treino');
+    }
+  };
+
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen font-sans pb-24">
-      <header className="pt-12 pb-4 px-6">
-        <div className="flex justify-between items-center mb-6">
+      <header className="pt-8 pb-4 px-6">
+        <div className="flex justify-center items-center mb-6 relative">
           <h1 className="text-2xl font-bold text-primary-800">Diário de Treino</h1>
-          <div className="flex space-x-2">
-            <button className="p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-            </button>
-            <button className="p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </button>
-          </div>
+          <Link href="/backup" className="p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 absolute right-0">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+            </svg>
+          </Link>
         </div>
         <div className="relative">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-3 top-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -200,7 +207,7 @@ export default function Home() {
       </header>
 
       <section className="px-6 py-4">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800">
+        <h2 className="text-xl font-semibold mb-4 text-gray-800 text-center">
           Seu treino de hoje
           <span className="text-sm font-normal text-gray-500 ml-2">
             ({diasDaSemana[new Date().getDay() % 7]})
@@ -229,7 +236,9 @@ export default function Home() {
             <Link
               key={treino.id}
               href={`/treino/${treino.id}`}
-              className="bg-white rounded-2xl shadow-md p-4 mb-6 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 block"
+              className={`block bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 ${
+                treino.ativo === false ? 'opacity-70' : ''
+              }`}
             >
               <div className="flex items-center mb-3">
                 <span className="bg-primary-100 text-primary-800 px-2 py-1 rounded-lg text-xs font-medium mr-4 whitespace-nowrap min-w-[100px] text-center">
@@ -238,44 +247,52 @@ export default function Home() {
                 <h3 className="font-bold text-xl text-primary-700 text-center flex-1 mx-auto">{treino.nome}</h3>
                 <div className="min-w-[30px]"></div>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col w-full mr-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-gray-700">Progresso</span>
-                    <span className="text-sm font-medium text-primary-600">
+              {treino.ativo !== false && (
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col w-full mr-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-gray-700">Progresso</span>
+                      <span className="text-sm font-medium text-primary-600">
+                        {treino.id && progressoTreinos[treino.id] 
+                          ? `${Math.round((progressoTreinos[treino.id].completos / Math.max(1, progressoTreinos[treino.id].total)) * 100)}%`
+                          : '0%'}
+                      </span>
+                    </div>
+                    <div className="h-3 w-full bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary-600 rounded-full transition-all duration-500 ease-in-out" 
+                        style={{ 
+                          width: treino.id && progressoTreinos[treino.id] 
+                            ? `${(progressoTreinos[treino.id].completos / Math.max(1, progressoTreinos[treino.id].total)) * 100}%` 
+                            : '0%' 
+                        }}
+                      ></div>
+                    </div>
+                    <span className="text-xs mt-1 text-gray-500">
                       {treino.id && progressoTreinos[treino.id] 
-                        ? `${Math.round((progressoTreinos[treino.id].completos / Math.max(1, progressoTreinos[treino.id].total)) * 100)}%`
-                        : '0%'}
+                        ? `${progressoTreinos[treino.id].completos}/${progressoTreinos[treino.id].total} exercícios concluídos` 
+                        : 'Nenhum exercício concluído'}
                     </span>
                   </div>
-                  <div className="h-3 w-full bg-gray-200 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary-600 rounded-full transition-all duration-500 ease-in-out" 
-                      style={{ 
-                        width: treino.id && progressoTreinos[treino.id] 
-                          ? `${(progressoTreinos[treino.id].completos / Math.max(1, progressoTreinos[treino.id].total)) * 100}%` 
-                          : '0%' 
-                      }}
-                    ></div>
-                  </div>
-                  <span className="text-xs mt-1 text-gray-500">
-                    {treino.id && progressoTreinos[treino.id] 
-                      ? `${progressoTreinos[treino.id].completos}/${progressoTreinos[treino.id].total} exercícios concluídos` 
-                      : 'Nenhum exercício concluído'}
-                  </span>
+                  <button className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors duration-300 transform hover:scale-105">
+                    Iniciar
+                  </button>
                 </div>
-                <button className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors duration-300 transform hover:scale-105">
-                  Iniciar
-                </button>
-              </div>
+              )}
+              {treino.ativo === false && (
+                <div className="flex items-center justify-between px-4 py-2 bg-red-50 rounded-lg mt-2">
+                  <span className="text-sm text-red-600 font-medium">Treino inativo</span>
+                  <button className="text-red-600 hover:text-red-800 text-sm underline">Ativar</button>
+                </div>
+              )}
             </Link>
           ))
         )}
       </section>
 
-      <section className="px-6 py-2">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800">Categorias</h2>
-        <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide">
+      <section className="px-6 pt-0 pb-2 -mt-4">
+        <h2 className="text-xl font-semibold mb-5 text-gray-800 text-center">Categorias</h2>
+        <div className="flex justify-center space-x-6 overflow-x-auto pb-3 scrollbar-hide">
           {categorias.map((categoria) => (
             <Link
               key={categoria.nome}
@@ -299,14 +316,15 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="px-6 py-2">
+      <section className="px-6 pt-4 pb-2">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-800">Seus treinos</h2>
-          {busca.trim() && <span className="text-sm text-gray-500">Resultados para: "{busca}"</span>}
-          {!busca.trim() && (
-            <button className="text-primary-600 font-medium hover:text-primary-800 transition-colors duration-300">
+          {busca.trim() ? (
+            <span className="text-sm text-gray-500">"{busca}"</span>
+          ) : (
+            <Link href="/treinos" className="text-primary-600 font-medium hover:text-primary-800 transition-colors duration-300 text-right">
               Ver todos
-            </button>
+            </Link>
           )}
         </div>
         {treinosFiltrados.length === 0 ? (
@@ -319,7 +337,9 @@ export default function Home() {
               <Link
                 key={treino.id}
                 href={`/treino/${treino.id}`}
-                className="block bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300"
+                className={`block bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 ${
+                  treino.ativo === false ? 'opacity-70' : ''
+                }`}
               >
                 <div className="flex items-center">
                   <div className="bg-primary-100 rounded-lg p-3 mr-4">
@@ -330,8 +350,28 @@ export default function Home() {
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-800">{treino.nome}</h3>
                     <p className="text-sm text-gray-500">{diasDaSemana[treino.diaDaSemana !== undefined ? treino.diaDaSemana % 7 : 0]}</p>
+                    {treino.ativo === false && (
+                      <span className="inline-block mt-1 px-2 py-0.5 bg-red-50 text-red-600 text-xs rounded-full">
+                        Inativo
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center space-x-2">
+                    <button
+                      onClick={(e) => alternarStatusTreino(e, treino.id!)}
+                      className={`${treino.ativo !== false ? 'text-green-500 hover:text-green-700' : 'text-red-500 hover:text-red-700'}`}
+                      title={treino.ativo !== false ? "Inativar treino" : "Ativar treino"}
+                    >
+                      {treino.ativo !== false ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -407,42 +447,7 @@ export default function Home() {
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-100 py-2 max-w-[390px] mx-auto z-10">
-        <div className="grid grid-cols-5 items-center">
-          <Link href="/" className="flex flex-col items-center justify-center p-2 hover:text-primary-600 transition-colors duration-300">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            <span className="text-xs mt-1 font-medium text-primary-600">Início</span>
-          </Link>
-          <Link href="/fotos" className="flex flex-col items-center justify-center p-2 hover:text-primary-600 transition-colors duration-300">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span className="text-xs mt-1 font-medium text-gray-500">Fotos</span>
-          </Link>
-          <button
-            onClick={abrirModal}
-            className="flex flex-col items-center justify-center bg-primary-600 rounded-full w-14 h-14 -mt-6 mx-auto hover:bg-primary-700 transition-colors duration-300 shadow-lg"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
-          <Link href="/comparacao" className="flex flex-col items-center justify-center p-2 hover:text-primary-600 transition-colors duration-300">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            <span className="text-xs mt-1 font-medium text-gray-500">Comparação</span>
-          </Link>
-          <Link href="/relatorio" className="flex flex-col items-center justify-center p-2 hover:text-primary-600 transition-colors duration-300">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span className="text-xs mt-1 font-medium text-gray-500">Relatório</span>
-          </Link>
-        </div>
-      </nav>
+      <Navbar onAddClick={abrirModal} />
     </div>
   );
 }

@@ -41,6 +41,7 @@ export default function ExercicioPage() {
   const [novaMetaMax, setNovaMetaMax] = useState('');
   const [showSeriesModal, setShowSeriesModal] = useState(false);
   const [numeroSeries, setNumeroSeries] = useState(0);
+  const [observacao, setObservacao] = useState('');
 
   const exercicio = useLiveQuery(
     () => db.exercicios.get(exercicioId),
@@ -235,7 +236,7 @@ export default function ExercicioPage() {
 
         return {
           id: Date.now() + Math.random(),
-        exercicioId,
+          exercicioId,
           data: new Date(),
           repeticoes: exercicio.tipoExecucao === 'COMP' ? (
             serie.numero === 1 ? 15 : 
@@ -245,7 +246,7 @@ export default function ExercicioPage() {
           peso,
           tipo,
           ordem,
-          observacoes: ''
+          observacoes: observacao.trim()
         };
       });
 
@@ -271,8 +272,9 @@ export default function ExercicioPage() {
         await db.series.update(serie.id, { peso: novaPeso });
       }
 
-      // Limpar apenas as repetições, mantendo todas as cargas
+      // Limpar as repetições e a observação
       setRepeticoes({});
+      setObservacao('');
       setIsRegistrando(false);
       toast.success('Série completada com sucesso!');
     } catch (error) {
@@ -493,19 +495,19 @@ export default function ExercicioPage() {
                     </svg>
                   </button>
                 </div>
-        </div>
+              </div>
             ) : (
               <div className="flex-1 flex items-center justify-center group mx-4">
                 <h1 className="text-xl font-bold text-center text-blue-600">{exercicio.nome}</h1>
-        <button
+                <button
                   onClick={() => setEditandoNome(true)}
                   className="ml-2 text-gray-400 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
-        >
+                >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                   </svg>
-        </button>
-      </div>
+                </button>
+              </div>
             )}
             <div className="flex space-x-4">
               <button
@@ -535,8 +537,8 @@ export default function ExercicioPage() {
               </Link>
             </div>
           </div>
-                  </div>
-                </div>
+        </div>
+      </div>
 
       <div className="container mx-auto px-4 py-6">
         <div className="bg-white rounded-lg shadow-sm">
@@ -572,8 +574,8 @@ export default function ExercicioPage() {
                         </button>
                         
                         <div className="w-16 text-center">
-                      <input
-                        type="number"
+                          <input
+                            type="number"
                             value={numeroSeries}
                             onChange={(e) => setNumeroSeries(Math.max(1, parseInt(e.target.value) || 1))}
                             className="w-full text-center border border-gray-300 rounded-lg px-2 py-1"
@@ -592,7 +594,7 @@ export default function ExercicioPage() {
                       </div>
                     </div>
 
-                      <div>
+                    <div>
                       <h3 className="text-base font-semibold text-gray-800 mb-2">Meta de Repetições</h3>
                       <div className="flex items-center justify-center space-x-2">
                         <input
@@ -640,8 +642,8 @@ export default function ExercicioPage() {
                     </button>
                   </div>
                 </div>
-            </div>
-          )}
+              </div>
+            )}
 
             <div className="space-y-6">
               <div className="flex justify-between items-center mb-6">
@@ -658,14 +660,14 @@ export default function ExercicioPage() {
                         step="0.5"
                         placeholder="0"
                       />
-          <button
+                      <button
                         onClick={handleIncrementarCarga}
                         className="ml-2 text-blue-500 hover:text-blue-600"
-          >
+                      >
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                         </svg>
-          </button>
+                      </button>
                       <span className="ml-2">kg</span>
                     </div>
                   </div>
@@ -691,7 +693,7 @@ export default function ExercicioPage() {
                           <h3 className="text-base font-semibold text-gray-800">
                             {serieNumero === 1 ? 'Warm Up' : `Feeder ${serieNumero - 1}`}
                           </h3>
-            </div>
+                        </div>
 
                         <div className="bg-white rounded p-1.5">
                           <div className="flex flex-col items-center space-y-1">
@@ -740,12 +742,12 @@ export default function ExercicioPage() {
                                 <span className="text-sm font-medium text-blue-600">{historicoAnterior[serieNumero]?.peso === null ? '-' : historicoAnterior[serieNumero]?.peso}</span>
                                 <span className="text-xs text-gray-400">kg</span>
                               </div>
-                </div>
+                            </div>
                             <div className="w-full flex flex-col items-center">
                               <span className="text-xs text-gray-600">Reps</span>
                               <span className="text-sm font-medium text-blue-600">
                                 {historicoAnterior[serieNumero]?.repeticoes === null ? '-' : historicoAnterior[serieNumero]?.repeticoes}
-                        </span>
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -792,6 +794,17 @@ export default function ExercicioPage() {
               >
                 {isRegistrando ? 'Registrando...' : 'Completar Exercício'}
               </button>
+
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <h3 className="text-base font-medium text-gray-700 mb-2">Observações</h3>
+                <textarea 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  placeholder="Adicione observações sobre o exercício (opcional)"
+                  rows={3}
+                  value={observacao}
+                  onChange={(e) => setObservacao(e.target.value)}
+                ></textarea>
+              </div>
             </div>
           </div>
         </div>
