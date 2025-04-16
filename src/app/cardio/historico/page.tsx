@@ -38,7 +38,7 @@ export default function HistoricoCardio() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 pb-24">
-      <header className="pt-8 pb-6 px-6 bg-gray-50/80 backdrop-blur-sm shadow-sm">
+      <header className="pt-8 pb-6 px-6 bg-white backdrop-blur-sm shadow-sm">
         <div className="flex items-center justify-center max-w-5xl mx-auto">
           <Link href="/cardio" className="absolute left-6">
             <button className="p-2 rounded-full hover:bg-gray-100 transition-all duration-300">
