@@ -2,23 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Estilo para a barra de status em iOS */
-html, body {
-  background-color: #e6f1ff;
-  padding: 0;
-  margin: 0;
-  min-height: 100%;
-  width: 100%;
-}
-
-/* Estilo para garantir que o app preencha toda a tela incluindo a barra de status */
-#__next, main {
-  min-height: 100vh;
-  background-color: #e6f1ff;
-  width: 100%;
-  padding-top: env(safe-area-inset-top);
-}
-
 /* Classes de rotação para imagens */
 .rotate-90 {
   transform: rotate(90deg);
@@ -61,6 +44,7 @@ body {
   @apply antialiased;
   -webkit-tap-highlight-color: transparent;
   color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-start-rgb));
 }
 
 /* Ajustes para botões */
@@ -72,4 +56,14 @@ button {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
+}
+
+/* Estilo para a página inicial (home) */
+.homepage-container {
+  background-color: #e6f1ff;
+}
+
+/* Classe para forçar a cor da barra de status na página inicial */
+.home-status-bar {
+  background-color: #e6f1ff;
 } 
