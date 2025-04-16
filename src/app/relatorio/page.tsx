@@ -612,7 +612,8 @@ export default function Relatorio() {
         dataSelecionada: dataSelecionada.toISOString(),
         dietaSemanal,
         comentarioTreino,
-        calorias
+        calorias,
+        peso
       };
       
       localStorage.setItem('relatorio_temp', JSON.stringify(dadosParaSalvar));
@@ -745,6 +746,7 @@ export default function Relatorio() {
           if (dados.dietaSemanal) setDietaSemanal(dados.dietaSemanal);
           if (dados.comentarioTreino) setComentarioTreino(dados.comentarioTreino);
           if (dados.calorias) setCalorias(dados.calorias);
+          if (dados.peso) setPeso(dados.peso);
           if (dados.dataSelecionada) {
             try {
               setDataSelecionada(new Date(dados.dataSelecionada));
