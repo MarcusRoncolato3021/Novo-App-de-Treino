@@ -29,11 +29,20 @@ export default function TreinoPage() {
   const [expandedExercicios, setExpandedExercicios] = useState<{[key: number]: boolean}>({});
   const [showHelp, setShowHelp] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
+  const [editandoNome, setEditandoNome] = useState(false);
+  const [novoNome, setNovoNome] = useState('');
 
   const treino = useLiveQuery(
     () => db.treinos.get(treinoId),
     [treinoId]
   );
+
+  // Atualizar o nome sempre que o treino mudar
+  useEffect(() => {
+    if (treino?.nome) {
+      setNovoNome(treino.nome);
+    }
+  }, [treino]);
 
   const exercicios = useLiveQuery(
     () => db.exercicios
@@ -80,6 +89,22 @@ export default function TreinoPage() {
     }
   };
 
+  const handleSaveNome = async () => {
+    if (!novoNome.trim()) {
+      toast.error('O nome do treino não pode ficar vazio');
+      return;
+    }
+
+    try {
+      await db.treinos.update(treinoId, { nome: novoNome.trim() });
+      setEditandoNome(false);
+      toast.success('Nome do treino atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar nome do treino:', error);
+      toast.error('Erro ao atualizar o nome do treino');
+    }
+  };
+
   const getTituloSerie = (tipo: TipoSerie, ordem: number): string => {
     switch (tipo) {
       case 'warm-up':
@@ -105,9 +130,9 @@ export default function TreinoPage() {
 
   const abrirModal = () => {
     setModalAberto(true);
-    };
+  };
 
-    return (
+  return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 pb-24">
       <header className="pt-8 pb-6 px-6 bg-gray-50/80 backdrop-blur-sm shadow-sm">
         <div className="relative flex items-center justify-center max-w-5xl mx-auto">
@@ -119,9 +144,61 @@ export default function TreinoPage() {
             </Link>
           </div>
 
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800">
-            {treino?.nome || 'Carregando...'}
-          </h1>
+          {editandoNome ? (
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={novoNome}
+                onChange={(e) => setNovoNome(e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-xl font-bold text-center bg-white"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSaveNome();
+                  } else if (e.key === 'Escape') {
+                    setEditandoNome(false);
+                    setNovoNome(treino?.nome || '');
+                  }
+                }}
+              />
+              <button
+                onClick={handleSaveNome}
+                className="text-green-600 p-1 hover:text-green-700"
+                title="Salvar nome"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              </button>
+              <button
+                onClick={() => {
+                  setEditandoNome(false);
+                  setNovoNome(treino?.nome || '');
+                }}
+                className="text-red-600 p-1 hover:text-red-700"
+                title="Cancelar"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center group">
+              <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800">
+                {treino?.nome || 'Carregando...'}
+              </h1>
+              <button
+                onClick={() => setEditandoNome(true)}
+                className="ml-2 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Editar nome"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                </svg>
+              </button>
+            </div>
+          )}
 
           <div className="absolute right-0">
             <button
@@ -172,17 +249,17 @@ export default function TreinoPage() {
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                       </svg>
-              </button>
-              <button
+                    </button>
+                    <button
                       onClick={() => exercicio.id && handleDeleteExercicio(exercicio.id)}
                       className="text-red-400 p-1 hover:text-red-500"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                       </svg>
-              </button>
-            </div>
-          </div>
+                    </button>
+                  </div>
+                </div>
                 {exercicio.id && expandedExercicios[exercicio.id] && (
                   historicoExercicios && historicoExercicios[exercicio.id]?.length > 0 ? (
                     <div className="text-sm text-gray-600 space-y-1">
@@ -197,12 +274,12 @@ export default function TreinoPage() {
                             <span>{registro.repeticoes} reps</span>
                           </div>
                         ))}
-            </div>
+                    </div>
                   ) : (
                     <p className="text-sm text-gray-500">Nenhuma série registrada</p>
                   )
                 )}
-            </div>
+              </div>
             ))}
           </div>
 
@@ -228,8 +305,8 @@ export default function TreinoPage() {
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
+              </svg>
+            </button>
                
             <h2 className="text-xl font-bold text-gray-900 mb-4">Regras de Execução</h2>
                
@@ -247,25 +324,25 @@ export default function TreinoPage() {
                   <div>
                     <p className="font-medium text-gray-800">Warm up</p>
                     <p>Peso para 20 repetições, fazer por volta de 15 repetições, descansa 30s após ele.</p>
-                          </div>
+                  </div>
 
-                            <div>
+                  <div>
                     <p className="font-medium text-gray-800">Feeders</p>
                     <p>Peso para 10~12 repetições, fazer só 5 repetições, descansa 1 minuto após cada Feeder Set.</p>
-                            </div>
+                  </div>
 
-                              <div>
+                  <div>
                     <p className="font-medium text-gray-800">Work set</p>
                     <p>Peso para falhar entre 8 e 10 repetições, descansa 2 minutos após cada Work Set</p>
-                                </div>
-                              </div>
-                          </div>
+                  </div>
+                </div>
+              </div>
 
-                          <div>
+              <div>
                 <p className="mb-3">
                   Exercícios marcados em SIMP fazer 3 séries convencionais, com 2 minutos de descanso entre elas, com peso para falhar entre 8 a 10 repetições.
                 </p>
-                          </div>
+              </div>
 
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-gray-800 font-medium">Observação importante:</p>
@@ -275,7 +352,7 @@ export default function TreinoPage() {
               </div>
             </div>
           </div>
-      </div>
+        </div>
       )}
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-100 py-2 max-w-[390px] mx-auto z-10">
