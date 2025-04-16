@@ -5,6 +5,18 @@
 /* Estilo para a barra de status em iOS */
 html, body {
   background-color: #e6f1ff;
+  padding: 0;
+  margin: 0;
+  min-height: 100%;
+  width: 100%;
+}
+
+/* Estilo para garantir que o app preencha toda a tela incluindo a barra de status */
+#__next, main {
+  min-height: 100vh;
+  background-color: #e6f1ff;
+  width: 100%;
+  padding-top: env(safe-area-inset-top);
 }
 
 /* Classes de rotação para imagens */
