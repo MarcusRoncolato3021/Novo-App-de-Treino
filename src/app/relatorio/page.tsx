@@ -867,7 +867,7 @@ export default function Relatorio() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 pb-24">
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen font-sans pb-24">
       {/* Modal de foto em tela cheia */}
       {fotoTelaCheia && (
         <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
@@ -913,7 +913,7 @@ export default function Relatorio() {
         </div>
       )}
 
-      <header className="pt-6 pb-4 px-6 bg-white backdrop-blur-sm shadow-sm">
+      <header className="pt-8 pb-6 px-6 bg-white backdrop-blur-sm shadow-sm">
         <div className="relative flex items-center justify-center">
           <div className="absolute left-6">
             {activeTab === 'historico' ? (
