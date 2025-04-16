@@ -275,9 +275,8 @@ export default function ExercicioPage() {
         await db.series.update(serie.id, { peso: novaPeso });
       }
 
-      // Limpar as repetições e a observação
+      // Limpar apenas as repetições, mantendo as observações
       setRepeticoes({});
-      setObservacao('');
       setIsRegistrando(false);
       toast.success('Série completada com sucesso!');
     } catch (error) {
