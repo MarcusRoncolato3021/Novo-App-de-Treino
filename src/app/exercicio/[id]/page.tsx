@@ -702,10 +702,11 @@ export default function ExercicioPage() {
                     return (
                       <div key={serie.id} className="bg-gray-50 rounded p-1.5">
                         <div className="flex justify-between items-center">
+                          <div className="w-10"></div>
                           <h3 className="text-base font-semibold text-gray-800">
                             {serieNumero === 1 ? 'Warm Up' : `Feeder ${serieNumero - 1}`}
                           </h3>
-                          <div className="flex items-center">
+                          <div className="flex items-center w-10 justify-end">
                             <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center">
                               <span>{getTempoDescanso(serieNumero, exercicio.tipoExecucao)}</span>
                               <button 
@@ -775,10 +776,11 @@ export default function ExercicioPage() {
                   return (
                     <div key={serie.id} className="bg-gray-50 rounded p-1.5">
                       <div className="flex justify-between items-center">
+                        <div className="w-10"></div>
                         <h3 className="text-base font-semibold text-gray-800">
                           {exercicio.tipoExecucao === 'COMP' ? `Work Set ${workSetNumero}` : `Work Set ${serieNumero}`}
                         </h3>
-                        <div className="flex items-center">
+                        <div className="flex items-center w-10 justify-end">
                           <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center">
                             <span>{getTempoDescanso(serieNumero, exercicio.tipoExecucao)}</span>
                             <button 
