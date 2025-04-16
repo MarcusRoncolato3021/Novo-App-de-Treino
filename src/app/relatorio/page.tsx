@@ -915,7 +915,7 @@ export default function Relatorio() {
         </div>
       )}
 
-      <header className="pt-2 pb-1 px-6 bg-white backdrop-blur-sm shadow-sm">
+      <header className="pt-4 pb-2 px-6 bg-white backdrop-blur-sm shadow-sm">
         <div className="relative flex items-center justify-center">
           <div className="absolute left-6">
             {activeTab === 'historico' ? (

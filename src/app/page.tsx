@@ -183,7 +183,7 @@ export default function Home() {
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen font-sans pb-24">
-      <header className="pt-2 pb-1 px-6">
+      <header className="pt-4 pb-2 px-6">
         <div className="flex justify-center items-center mb-6 relative">
           <h1 className="text-2xl font-bold text-primary-800">Diário de Treino</h1>
           <Link href="/backup" className="p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 absolute right-0">

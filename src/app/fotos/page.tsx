@@ -316,7 +316,7 @@ function FotosContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 pb-24">
-      <header className="pt-2 pb-1 px-6 bg-white backdrop-blur-sm shadow-sm">
+      <header className="pt-4 pb-2 px-6 bg-white backdrop-blur-sm shadow-sm">
         <div className="relative flex items-center justify-center max-w-5xl mx-auto">
           <div className="absolute left-0">
             {isFromRelatorio ? (
@@ -489,7 +489,7 @@ function FotosContent() {
       {mostrarHistorico && (
         <div className="fixed inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 z-50">
           <div className="h-full flex flex-col">
-            <header className="pt-2 pb-1 px-6 bg-white/80 backdrop-blur-sm shadow-sm">
+            <header className="pt-4 pb-2 px-6 bg-white/80 backdrop-blur-sm shadow-sm">
               <div className="relative flex items-center justify-center max-w-5xl mx-auto">
                 <div className="absolute left-0">
                   <button 
