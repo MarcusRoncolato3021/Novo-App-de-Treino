@@ -56,14 +56,4 @@ button {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
-}
-
-/* Estilo para a página inicial (home) */
-.homepage-container {
-  background-color: #e6f1ff;
-}
-
-/* Classe para forçar a cor da barra de status na página inicial */
-.home-status-bar {
-  background-color: #e6f1ff;
 } 
