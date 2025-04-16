@@ -334,7 +334,7 @@ function FotosContent() {
             )}
           </div>
 
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800">
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800 -mt-1">
             {isFromRelatorio && mostrarHistorico ? 'Selecionar Foto' : 'Fotos'}
           </h1>
 
@@ -502,7 +502,7 @@ function FotosContent() {
                   </button>
                 </div>
 
-                <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800">
+                <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800 -mt-1">
                   {isFromRelatorio ? 'Selecionar Foto' : 'Histórico'}
                 </h2>
               </div>

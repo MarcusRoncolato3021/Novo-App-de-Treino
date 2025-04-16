@@ -182,7 +182,7 @@ function TreinosContent() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </Link>
-            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800">{getTituloCategoria()}</h1>
+            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800 -mt-1">{getTituloCategoria()}</h1>
             <div className="w-10"></div> {/* Espaçador para manter o alinhamento centralizado */}
           </div>
         </div>

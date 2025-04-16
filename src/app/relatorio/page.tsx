@@ -936,7 +936,7 @@ export default function Relatorio() {
             )}
           </div>
 
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800">
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800 truncate -mt-1">
             {activeTab === 'historico' ? 'Histórico' : 'Relatório'}
           </h1>
 

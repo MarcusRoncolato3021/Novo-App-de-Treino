@@ -213,7 +213,7 @@ export default function TreinoPage() {
               </div>
             </div>
           ) : (
-            <div className="flex items-center group max-w-[70%]">
+            <div className="flex items-center group max-w-[70%] -mt-1">
               <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800 truncate">
                 {treino?.nome || 'Carregando...'}
               </h1>

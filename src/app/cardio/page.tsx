@@ -86,7 +86,7 @@ export default function CardioPage() {
             </Link>
           </div>
 
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800">
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800 -mt-1">
             Exercício Cardio
           </h1>
 
