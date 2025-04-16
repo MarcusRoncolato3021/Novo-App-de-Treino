@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Estilo para a barra de status em iOS */
+html, body {
+  background-color: #e6f1ff;
+}
+
 /* Classes de rotação para imagens */
 .rotate-90 {
   transform: rotate(90deg);
@@ -44,7 +49,6 @@ body {
   @apply antialiased;
   -webkit-tap-highlight-color: transparent;
   color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-start-rgb));
 }
 
 /* Ajustes para botões */
