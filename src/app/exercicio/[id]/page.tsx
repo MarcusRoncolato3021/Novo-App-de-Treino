@@ -42,6 +42,7 @@ export default function ExercicioPage() {
   const [showSeriesModal, setShowSeriesModal] = useState(false);
   const [numeroSeries, setNumeroSeries] = useState(0);
   const [observacao, setObservacao] = useState('');
+  const [workSetDescanso, setWorkSetDescanso] = useState(2); // Intervalo padrão para work sets em minutos
 
   const exercicio = useLiveQuery(
     () => db.exercicios.get(exercicioId),
@@ -302,6 +303,15 @@ export default function ExercicioPage() {
       if (numero === 2 || numero === 3) return 5; // Feeders
     }
     return undefined; // Work Sets não têm repetições fixas
+  };
+
+  // Função para obter o tempo de descanso com base no tipo de série
+  const getTempoDescanso = (serieNumero: number, tipoExecucao: TipoExecucao): string => {
+    if (tipoExecucao === 'COMP') {
+      if (serieNumero === 1) return '30s'; // Warm Up
+      if (serieNumero === 2 || serieNumero === 3) return '1min'; // Feeders
+    }
+    return `${workSetDescanso}min`; // Work Sets
   };
 
   // Log para debug
@@ -689,10 +699,13 @@ export default function ExercicioPage() {
                   if (exercicio.tipoExecucao === 'COMP' && serieNumero <= 3) {
                     return (
                       <div key={serie.id} className="bg-gray-50 rounded p-1.5">
-                        <div className="flex justify-center">
+                        <div className="flex justify-center items-center">
                           <h3 className="text-base font-semibold text-gray-800">
                             {serieNumero === 1 ? 'Warm Up' : `Feeder ${serieNumero - 1}`}
                           </h3>
+                          <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            {getTempoDescanso(serieNumero, exercicio.tipoExecucao)}
+                          </span>
                         </div>
 
                         <div className="bg-white rounded p-1.5">
@@ -726,10 +739,36 @@ export default function ExercicioPage() {
 
                   return (
                     <div key={serie.id} className="bg-gray-50 rounded p-1.5">
-                      <div className="flex justify-center">
+                      <div className="flex justify-center items-center">
                         <h3 className="text-base font-semibold text-gray-800">
                           {exercicio.tipoExecucao === 'COMP' ? `Work Set ${workSetNumero}` : `Work Set ${serieNumero}`}
                         </h3>
+                        <div className="ml-2 flex items-center">
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center">
+                            <span>{workSetDescanso}min</span>
+                            {exercicio.tipoExecucao === 'COMP' && serieNumero > 3 && serieNumero === series.length && (
+                              <button 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  const novoTempo = prompt('Tempo de descanso (em minutos):', workSetDescanso.toString());
+                                  if (novoTempo !== null) {
+                                    const tempo = parseInt(novoTempo);
+                                    if (!isNaN(tempo) && tempo > 0) {
+                                      setWorkSetDescanso(tempo);
+                                      toast.success(`Tempo de descanso atualizado para ${tempo} minutos`);
+                                    }
+                                  }
+                                }}
+                                className="ml-1 text-blue-600"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                </svg>
+                              </button>
+                            )}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-1.5">
