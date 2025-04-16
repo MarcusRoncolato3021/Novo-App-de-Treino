@@ -32,6 +32,20 @@ export default function TreinoPage() {
   const [editandoNome, setEditandoNome] = useState(false);
   const [novoNome, setNovoNome] = useState('');
 
+  // Carregar o estado dos exercícios expandidos do localStorage
+  useEffect(() => {
+    if (treinoId) {
+      try {
+        const savedState = localStorage.getItem(`expandedExercicios_${treinoId}`);
+        if (savedState) {
+          setExpandedExercicios(JSON.parse(savedState));
+        }
+      } catch (error) {
+        console.error('Erro ao carregar estado de exercícios expandidos:', error);
+      }
+    }
+  }, [treinoId]);
+
   const treino = useLiveQuery(
     () => db.treinos.get(treinoId),
     [treinoId]
@@ -73,10 +87,21 @@ export default function TreinoPage() {
   );
 
   const toggleExercicio = (exercicioId: number) => {
-    setExpandedExercicios(prev => ({
-      ...prev,
-      [exercicioId]: !prev[exercicioId]
-    }));
+    setExpandedExercicios(prev => {
+      const newState = {
+        ...prev,
+        [exercicioId]: !prev[exercicioId]
+      };
+      
+      // Salvar o estado atualizado no localStorage
+      try {
+        localStorage.setItem(`expandedExercicios_${treinoId}`, JSON.stringify(newState));
+      } catch (error) {
+        console.error('Erro ao salvar estado de exercícios expandidos:', error);
+      }
+      
+      return newState;
+    });
   };
 
   const handleDeleteExercicio = async (exercicioId: number) => {
