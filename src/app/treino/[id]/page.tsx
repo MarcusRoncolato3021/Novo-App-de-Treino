@@ -145,12 +145,12 @@ export default function TreinoPage() {
           </div>
 
           {editandoNome ? (
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-col items-center space-y-2 max-w-[70%]">
               <input
                 type="text"
                 value={novoNome}
                 onChange={(e) => setNovoNome(e.target.value)}
-                className="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-xl font-bold text-center bg-white"
+                className="w-full px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-xl font-bold text-center bg-white"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -161,31 +161,35 @@ export default function TreinoPage() {
                   }
                 }}
               />
-              <button
-                onClick={handleSaveNome}
-                className="text-green-600 p-1 hover:text-green-700"
-                title="Salvar nome"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                </svg>
-              </button>
-              <button
-                onClick={() => {
-                  setEditandoNome(false);
-                  setNovoNome(treino?.nome || '');
-                }}
-                className="text-red-600 p-1 hover:text-red-700"
-                title="Cancelar"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="flex space-x-4">
+                <button
+                  onClick={handleSaveNome}
+                  className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm flex items-center"
+                  title="Salvar nome"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 mr-1">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                  Salvar
+                </button>
+                <button
+                  onClick={() => {
+                    setEditandoNome(false);
+                    setNovoNome(treino?.nome || '');
+                  }}
+                  className="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg text-sm flex items-center"
+                  title="Cancelar"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 mr-1">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Cancelar
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="flex items-center group">
-              <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800">
+            <div className="flex items-center group max-w-[70%]">
+              <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800 truncate">
                 {treino?.nome || 'Carregando...'}
               </h1>
               <button
