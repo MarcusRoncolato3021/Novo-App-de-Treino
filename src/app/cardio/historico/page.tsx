@@ -40,7 +40,7 @@ export default function HistoricoCardio() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 pb-24">
       <header className="pt-4 pb-2 px-6 bg-white backdrop-blur-sm shadow-sm">
         <div className="flex items-center justify-center max-w-5xl mx-auto">
-          <Link href="/cardio" className="absolute left-6">
+          <Link href="/cardio" className="absolute left-6 -ml-2">
             <button className="p-2 rounded-full hover:bg-gray-100 transition-all duration-300">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6 text-primary-600">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />

@@ -318,7 +318,7 @@ function FotosContent() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 pb-24">
       <header className="pt-4 pb-2 px-6 bg-white backdrop-blur-sm shadow-sm">
         <div className="relative flex items-center justify-center max-w-5xl mx-auto">
-          <div className="absolute left-0">
+          <div className="absolute left-0 -ml-2">
             {isFromRelatorio ? (
               <Link href="/relatorio" className="p-2 rounded-full hover:bg-gray-100 transition-all duration-300">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6 text-primary-600">
@@ -338,7 +338,7 @@ function FotosContent() {
             {isFromRelatorio && mostrarHistorico ? 'Selecionar Foto' : 'Fotos'}
           </h1>
 
-          <div className="absolute right-0">
+          <div className="absolute right-0 -mr-2">
             <button 
               onClick={() => setMostrarHistorico(!mostrarHistorico)}
               className="p-2 rounded-full hover:bg-gray-100 transition-all duration-300"

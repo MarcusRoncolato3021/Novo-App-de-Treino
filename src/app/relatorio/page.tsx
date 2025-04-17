@@ -917,7 +917,7 @@ export default function Relatorio() {
 
       <header className="pt-4 pb-2 px-6 bg-white backdrop-blur-sm shadow-sm">
         <div className="relative flex items-center justify-center">
-          <div className="absolute left-6">
+          <div className="absolute left-6 -ml-2">
             {activeTab === 'historico' ? (
               <button 
                 onClick={() => setActiveTab('relatorio')} 
@@ -940,7 +940,7 @@ export default function Relatorio() {
             {activeTab === 'historico' ? 'Histórico' : 'Relatório'}
           </h1>
 
-          <div className="absolute right-6">
+          <div className="absolute right-6 -mr-2">
             <button 
               onClick={() => setActiveTab(activeTab === 'historico' ? 'relatorio' : 'historico')}
               className="p-2 rounded-full hover:bg-gray-100 transition-all duration-300"
