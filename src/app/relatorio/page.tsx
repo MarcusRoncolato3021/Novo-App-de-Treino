@@ -546,6 +546,205 @@ export default function Relatorio() {
     }
   };
 
+  // Função para gerar PDF de relatório individual
+  const gerarPDFIndividual = async (relatorio: any) => {
+    try {
+      setExportandoPDF(true);
+      toast.loading('Gerando PDF, aguarde...');
+
+      try {
+        // Criar instância jsPDF com orientação portrait (A4)
+        const doc = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+        
+        // Configurações de página
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 15; // Margem reduzida para maximizar espaço
+        
+        // Configurar fonte e tamanho
+        doc.setFont('helvetica');
+        
+        // Adicionar título
+        doc.setFontSize(18);
+        doc.setTextColor(40, 80, 200);
+        doc.text('Relatório Individual', pageWidth / 2, margin, { align: 'center' });
+        
+        // Adicionar data do relatório
+        doc.setFontSize(14);
+        doc.setTextColor(100, 100, 100);
+        const dataRelatorio = formatarDataDDMMYY(new Date(relatorio.data));
+        doc.text(`Data: ${dataRelatorio}`, pageWidth / 2, margin + 8, { align: 'center' });
+        
+        // Linha separadora
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, margin + 12, pageWidth - margin, margin + 12);
+        
+        // Adicionar informações do relatório
+        let yPos = margin + 20;
+        
+        // Peso
+        doc.setFontSize(14);
+        doc.setTextColor(0, 0, 0);
+        if (relatorio.peso) {
+          doc.text(`Peso: ${relatorio.peso} kg`, margin, yPos);
+          yPos += 8;
+        }
+        
+        // Calorias
+        if (relatorio.calorias) {
+          doc.text(`Calorias: ${relatorio.calorias} kcal`, margin, yPos);
+          yPos += 12;
+        }
+        
+        // Dieta Semanal
+        if (relatorio.dieta) {
+          doc.setFontSize(14);
+          doc.setTextColor(0, 0, 0);
+          doc.text('Dieta Semanal:', margin, yPos);
+          yPos += 6;
+          
+          doc.setFontSize(11);
+          doc.setTextColor(60, 60, 60);
+          
+          // Função para calcular altura do texto
+          const calcularAlturaTexto = (texto: string, larguraDisponivel: number, tamanhoFonte: number) => {
+            const caracteresPorLinha = Math.floor(larguraDisponivel / (tamanhoFonte * 0.5));
+            const linhas = Math.ceil(texto.length / caracteresPorLinha);
+            return linhas * (tamanhoFonte * 0.5);
+          };
+          
+          // Dividir o texto em linhas para caber na largura disponível
+          const larguraDisponivel = pageWidth - (margin * 2);
+          const textoDieta = doc.splitTextToSize(relatorio.dieta, larguraDisponivel);
+          doc.text(textoDieta, margin, yPos);
+          
+          // Calcular espaço utilizado pelo texto
+          yPos += calcularAlturaTexto(relatorio.dieta, larguraDisponivel, 11) + 12;
+        }
+        
+        // Comentários
+        if (relatorio.comentarios) {
+          doc.setFontSize(14);
+          doc.setTextColor(0, 0, 0);
+          doc.text('Comentários sobre Treinos:', margin, yPos);
+          yPos += 6;
+          
+          doc.setFontSize(11);
+          doc.setTextColor(60, 60, 60);
+          
+          // Dividir o texto em linhas para caber na largura disponível
+          const larguraDisponivel = pageWidth - (margin * 2);
+          const textoComentarios = doc.splitTextToSize(relatorio.comentarios, larguraDisponivel);
+          doc.text(textoComentarios, margin, yPos);
+          
+          // Calcular espaço utilizado pelo texto
+          const alturaComentarios = calcularAlturaTexto(relatorio.comentarios, larguraDisponivel, 11);
+          yPos += alturaComentarios + 20;
+        }
+        
+        // Função auxiliar para processar imagem
+        const processarImagem = (imageBase64: string): Promise<string> => {
+          return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+              // Criar canvas para manipular a imagem
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              
+              // Definir as dimensões do canvas
+              canvas.width = img.width;
+              canvas.height = img.height;
+              
+              // Desenhar a imagem no canvas com a orientação correta
+              if (ctx) {
+                ctx.drawImage(img, 0, 0);
+              }
+              
+              // Retornar a imagem corrigida
+              resolve(canvas.toDataURL('image/jpeg', 0.95));
+            };
+            img.onerror = () => reject(new Error('Erro ao carregar imagem'));
+            img.src = imageBase64;
+          });
+        };
+        
+        // Fotos
+        if (relatorio.fotos && relatorio.fotos.length > 0) {
+          // Título de fotos
+          doc.setFontSize(14);
+          doc.setTextColor(0, 0, 0);
+          doc.text('Fotos:', margin, yPos);
+          yPos += 8;
+          
+          const fotos = relatorio.fotos;
+          const fotosProcessadas = [];
+          
+          // Processar fotos para garantir que estejam no formato correto
+          for (let i = 0; i < fotos.length; i++) {
+            try {
+              const fotoProcessada = await processarImagem(fotos[i]);
+              fotosProcessadas.push(fotoProcessada);
+            } catch (error) {
+              console.error('Erro ao processar foto:', error);
+            }
+          }
+          
+          // Calcular dimensões das fotos
+          const espacoHorizontal = pageWidth - (margin * 2);
+          const numColunas = Math.min(2, fotosProcessadas.length); // Máximo 2 fotos por linha
+          const larguraFoto = (espacoHorizontal / numColunas) - 5;
+          const alturaFoto = larguraFoto * 1.33; // Proporção aproximada
+          
+          // Adicionar fotos ao PDF
+          let fotoIndex = 0;
+          while (fotoIndex < fotosProcessadas.length) {
+            // Verificar se precisamos de uma nova página
+            if (yPos + alturaFoto > pageHeight - margin) {
+              doc.addPage();
+              yPos = margin;
+            }
+            
+            // Adicionar fotos em linha
+            for (let col = 0; col < numColunas && fotoIndex < fotosProcessadas.length; col++) {
+              const xPos = margin + (col * (larguraFoto + 5));
+              doc.addImage(
+                fotosProcessadas[fotoIndex],
+                'JPEG',
+                xPos,
+                yPos,
+                larguraFoto,
+                alturaFoto
+              );
+              fotoIndex++;
+            }
+            
+            // Avançar para a próxima linha
+            yPos += alturaFoto + 10;
+          }
+        }
+        
+        // Salvar o PDF
+        const dataFormatada = formatarDataDDMMYY(new Date(relatorio.data)).replace(/\//g, '-');
+        doc.save(`Relatorio_${dataFormatada}.pdf`);
+        toast.dismiss();
+        toast.success('PDF gerado com sucesso!');
+      } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        toast.error('Erro ao gerar PDF. Tente novamente.');
+      }
+      
+      setExportandoPDF(false);
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      toast.error('Erro ao gerar PDF. Tente novamente.');
+      setExportandoPDF(false);
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
@@ -1054,14 +1253,8 @@ export default function Relatorio() {
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={() => {
-                              // Configurar os relatórios de comparação para exportação
-                              setRelatoriosComparacao({
-                                recente: relatorio,
-                                anterior: null
-                              });
-                              
-                              // Chamar a função para gerar o PDF
-                              gerarPDF();
+                              // Chamar a função para gerar o PDF individual
+                              gerarPDFIndividual(relatorio);
                             }}
                             className="text-green-600 hover:text-green-800"
                             title="Exportar PDF"
