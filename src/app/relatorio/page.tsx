@@ -586,6 +586,13 @@ export default function Relatorio() {
         // Adicionar informações do relatório
         let yPos = margin + 20;
         
+        // Função para calcular altura do texto
+        const calcularAlturaTexto = (texto: string, larguraDisponivel: number, tamanhoFonte: number) => {
+          const caracteresPorLinha = Math.floor(larguraDisponivel / (tamanhoFonte * 0.5));
+          const linhas = Math.ceil(texto.length / caracteresPorLinha);
+          return linhas * (tamanhoFonte * 0.5);
+        };
+        
         // Peso
         doc.setFontSize(14);
         doc.setTextColor(0, 0, 0);
@@ -609,13 +616,6 @@ export default function Relatorio() {
           
           doc.setFontSize(11);
           doc.setTextColor(60, 60, 60);
-          
-          // Função para calcular altura do texto
-          const calcularAlturaTexto = (texto: string, larguraDisponivel: number, tamanhoFonte: number) => {
-            const caracteresPorLinha = Math.floor(larguraDisponivel / (tamanhoFonte * 0.5));
-            const linhas = Math.ceil(texto.length / caracteresPorLinha);
-            return linhas * (tamanhoFonte * 0.5);
-          };
           
           // Dividir o texto em linhas para caber na largura disponível
           const larguraDisponivel = pageWidth - (margin * 2);
