@@ -1054,6 +1054,25 @@ export default function Relatorio() {
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={() => {
+                              // Configurar os relatórios de comparação para exportação
+                              setRelatoriosComparacao({
+                                recente: relatorio,
+                                anterior: null
+                              });
+                              
+                              // Chamar a função para gerar o PDF
+                              gerarPDF();
+                            }}
+                            className="text-green-600 hover:text-green-800"
+                            title="Exportar PDF"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                          </button>
+                          
+                          <button
+                            onClick={() => {
                               setActiveTab('relatorio');
                               setDataSelecionada(new Date(relatorio.data));
                               setDietaSemanal(relatorio.dieta);
