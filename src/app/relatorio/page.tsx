@@ -571,20 +571,27 @@ export default function Relatorio() {
         // Adicionar título
         doc.setFontSize(18);
         doc.setTextColor(40, 80, 200);
-        doc.text('Relatório Individual', pageWidth / 2, margin, { align: 'center' });
+        doc.text('Relatório de Progresso', pageWidth / 2, margin, { align: 'center' });
         
-        // Adicionar data do relatório
-        doc.setFontSize(14);
+        // Adicionar data
+        doc.setFontSize(12);
         doc.setTextColor(100, 100, 100);
-        const dataRelatorio = formatarDataDDMMYY(new Date(relatorio.data));
-        doc.text(`Data: ${dataRelatorio}`, pageWidth / 2, margin + 8, { align: 'center' });
+        const dataAtual = new Date().toLocaleDateString('pt-BR');
+        doc.text(`Data: ${dataAtual}`, pageWidth / 2, margin + 8, { align: 'center' });
         
         // Linha separadora
         doc.setDrawColor(200, 200, 200);
         doc.line(margin, margin + 12, pageWidth - margin, margin + 12);
         
-        // Adicionar informações do relatório
-        let yPos = margin + 20;
+        // Adicionar data do relatório
+        doc.setFontSize(14);
+        doc.setTextColor(0, 0, 0);
+        const dataRelatorio = formatarDataDDMMYY(new Date(relatorio.data));
+        doc.text(`Relatório: ${dataRelatorio}`, pageWidth / 2, margin + 20, { align: 'center' });
+        
+        let yPos = margin + 30;
+        const rowHeight = 10;
+        const cellPadding = 5;
         
         // Função para calcular altura do texto
         const calcularAlturaTexto = (texto: string, larguraDisponivel: number, tamanhoFonte: number) => {
@@ -593,57 +600,93 @@ export default function Relatorio() {
           return linhas * (tamanhoFonte * 0.5);
         };
         
-        // Peso
-        doc.setFontSize(14);
-        doc.setTextColor(0, 0, 0);
-        if (relatorio.peso) {
-          doc.text(`Peso: ${relatorio.peso} kg`, margin, yPos);
-          yPos += 8;
-        }
+        // Tabela principal
+        // Cabeçalho com peso
+        doc.setFillColor(40, 80, 200);
+        doc.rect(margin, yPos, pageWidth - (margin * 2), rowHeight + 2, 'F');
+        doc.setFontSize(11);
+        doc.setTextColor(255, 255, 255);
+        doc.text('Informações Gerais', pageWidth / 2, yPos + 7, { align: 'center' });
+        yPos += rowHeight + 2;
         
-        // Calorias
+        // Conteúdo com peso
+        const infoRowHeight = 20;
+        doc.setFillColor(250, 250, 250);
+        doc.rect(margin, yPos, pageWidth - (margin * 2), infoRowHeight, 'F');
+        
+        doc.setFontSize(10);
+        doc.setTextColor(60, 60, 60);
+        
+        // Titulo da coluna
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Data', margin + cellPadding, yPos + cellPadding);
+        doc.text('Peso', margin + cellPadding + 50, yPos + cellPadding);
         if (relatorio.calorias) {
-          doc.text(`Calorias: ${relatorio.calorias} kcal`, margin, yPos);
-          yPos += 12;
+          doc.text('Calorias', margin + cellPadding + 100, yPos + cellPadding);
         }
         
-        // Dieta Semanal
+        // Dados
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.text(dataRelatorio, margin + cellPadding, yPos + cellPadding + 8);
+        doc.text(`${relatorio.peso || '0'} kg`, margin + cellPadding + 50, yPos + cellPadding + 8);
+        if (relatorio.calorias) {
+          doc.text(`${relatorio.calorias} kcal`, margin + cellPadding + 100, yPos + cellPadding + 8);
+        }
+        
+        yPos += infoRowHeight + 10;
+        
+        // Seção de Dieta
         if (relatorio.dieta) {
-          doc.setFontSize(14);
-          doc.setTextColor(0, 0, 0);
-          doc.text('Dieta Semanal:', margin, yPos);
-          yPos += 6;
-          
+          doc.setFillColor(40, 80, 200);
+          doc.rect(margin, yPos, pageWidth - (margin * 2), rowHeight + 2, 'F');
           doc.setFontSize(11);
+          doc.setTextColor(255, 255, 255);
+          doc.text('Dieta Semanal', pageWidth / 2, yPos + 7, { align: 'center' });
+          yPos += rowHeight + 2;
+          
+          // Calcular altura necessária para o texto da dieta
+          const larguraTextoDisponivel = pageWidth - (margin * 2) - (cellPadding * 2);
+          const alturaDieta = calcularAlturaTexto(relatorio.dieta, larguraTextoDisponivel, 9) + 10;
+          
+          // Conteúdo da dieta
+          doc.setFillColor(250, 250, 250);
+          doc.rect(margin, yPos, pageWidth - (margin * 2), alturaDieta, 'F');
+          
+          doc.setFontSize(9);
           doc.setTextColor(60, 60, 60);
           
-          // Dividir o texto em linhas para caber na largura disponível
-          const larguraDisponivel = pageWidth - (margin * 2);
-          const textoDieta = doc.splitTextToSize(relatorio.dieta, larguraDisponivel);
-          doc.text(textoDieta, margin, yPos);
+          const textoDieta = doc.splitTextToSize(relatorio.dieta, larguraTextoDisponivel);
+          doc.text(textoDieta, margin + cellPadding, yPos + cellPadding);
           
-          // Calcular espaço utilizado pelo texto
-          yPos += calcularAlturaTexto(relatorio.dieta, larguraDisponivel, 11) + 12;
+          yPos += alturaDieta + 10;
         }
         
-        // Comentários
+        // Seção de Comentários
         if (relatorio.comentarios) {
-          doc.setFontSize(14);
-          doc.setTextColor(0, 0, 0);
-          doc.text('Comentários sobre Treinos:', margin, yPos);
-          yPos += 6;
-          
+          doc.setFillColor(40, 80, 200);
+          doc.rect(margin, yPos, pageWidth - (margin * 2), rowHeight + 2, 'F');
           doc.setFontSize(11);
+          doc.setTextColor(255, 255, 255);
+          doc.text('Comentários', pageWidth / 2, yPos + 7, { align: 'center' });
+          yPos += rowHeight + 2;
+          
+          // Calcular altura necessária para o texto dos comentários
+          const larguraTextoDisponivel = pageWidth - (margin * 2) - (cellPadding * 2);
+          const alturaComentarios = calcularAlturaTexto(relatorio.comentarios, larguraTextoDisponivel, 9) + 10;
+          
+          // Conteúdo dos comentários
+          doc.setFillColor(250, 250, 250);
+          doc.rect(margin, yPos, pageWidth - (margin * 2), alturaComentarios, 'F');
+          
+          doc.setFontSize(9);
           doc.setTextColor(60, 60, 60);
           
-          // Dividir o texto em linhas para caber na largura disponível
-          const larguraDisponivel = pageWidth - (margin * 2);
-          const textoComentarios = doc.splitTextToSize(relatorio.comentarios, larguraDisponivel);
-          doc.text(textoComentarios, margin, yPos);
+          const textoComentarios = doc.splitTextToSize(relatorio.comentarios, larguraTextoDisponivel);
+          doc.text(textoComentarios, margin + cellPadding, yPos + cellPadding);
           
-          // Calcular espaço utilizado pelo texto
-          const alturaComentarios = calcularAlturaTexto(relatorio.comentarios, larguraDisponivel, 11);
-          yPos += alturaComentarios + 20;
+          yPos += alturaComentarios + 10;
         }
         
         // Função auxiliar para processar imagem
@@ -675,10 +718,12 @@ export default function Relatorio() {
         // Fotos
         if (relatorio.fotos && relatorio.fotos.length > 0) {
           // Título de fotos
-          doc.setFontSize(14);
-          doc.setTextColor(0, 0, 0);
-          doc.text('Fotos:', margin, yPos);
-          yPos += 8;
+          doc.setFillColor(40, 80, 200);
+          doc.rect(margin, yPos, pageWidth - (margin * 2), rowHeight + 2, 'F');
+          doc.setFontSize(11);
+          doc.setTextColor(255, 255, 255);
+          doc.text('Fotos', pageWidth / 2, yPos + 7, { align: 'center' });
+          yPos += rowHeight + 2;
           
           const fotos = relatorio.fotos;
           const fotosProcessadas = [];
@@ -711,6 +756,13 @@ export default function Relatorio() {
             // Adicionar fotos em linha
             for (let col = 0; col < numColunas && fotoIndex < fotosProcessadas.length; col++) {
               const xPos = margin + (col * (larguraFoto + 5));
+              
+              // Adicionar fundo e borda à foto
+              doc.setFillColor(250, 250, 250);
+              doc.rect(xPos, yPos, larguraFoto, alturaFoto, 'F');
+              doc.setDrawColor(200, 200, 200);
+              doc.rect(xPos, yPos, larguraFoto, alturaFoto);
+              
               doc.addImage(
                 fotosProcessadas[fotoIndex],
                 'JPEG',
@@ -726,6 +778,10 @@ export default function Relatorio() {
             yPos += alturaFoto + 10;
           }
         }
+        
+        // Adicionar bordas sutis ao redor de toda a página
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(margin, margin + 25, pageWidth - (margin * 2), pageHeight - (margin * 2) - 25);
         
         // Salvar o PDF
         const dataFormatada = formatarDataDDMMYY(new Date(relatorio.data)).replace(/\//g, '-');
