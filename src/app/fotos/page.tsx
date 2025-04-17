@@ -334,9 +334,17 @@ function FotosContent() {
             )}
           </div>
 
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800 -mt-1">
-            {isFromRelatorio && mostrarHistorico ? 'Selecionar Foto' : 'Fotos'}
-          </h1>
+          <div className="flex justify-center items-center mb-1 relative">
+            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800">Fotos</h1>
+            <button
+              onClick={() => setIsAddingPhoto(true)}
+              className="p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 absolute right-0"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </div>
 
           <div className="absolute right-0">
             <button 

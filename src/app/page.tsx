@@ -184,8 +184,8 @@ export default function Home() {
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen font-sans pb-24">
       <header className="pt-4 pb-2 px-6">
-        <div className="flex justify-center items-center mb-3 relative">
-          <h1 className="text-2xl font-bold text-primary-800">Diário de Treino</h1>
+        <div className="flex justify-center items-center mb-1 relative">
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800">Diário de Treino</h1>
           <Link href="/backup" className="p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 absolute right-0">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />

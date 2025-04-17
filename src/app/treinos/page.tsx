@@ -175,14 +175,14 @@ function TreinosContent() {
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen font-sans pb-24">
       <header className="divide-y divide-gray-100">
-        <div className="pt-4 pb-2 px-6 bg-gray-50/80 backdrop-blur-sm shadow-sm">
+        <div className="pt-2 pb-1 px-6 bg-white backdrop-blur-sm shadow-sm">
           <div className="flex justify-between items-center relative">
             <Link href="/" className="p-2 rounded-full hover:bg-gray-100 transition-all duration-300">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </Link>
-            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800 -mt-1">{getTituloCategoria()}</h1>
+            <h1 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800 mb-1">{getTituloCategoria()}</h1>
             <div className="w-10"></div> {/* Espaçador para manter o alinhamento centralizado */}
           </div>
         </div>

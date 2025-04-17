@@ -138,7 +138,7 @@ export default function Comparacao() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 pb-24">
-      <header className="pt-4 pb-2 px-6 bg-white backdrop-blur-sm shadow-sm">
+      <header className="pt-2 pb-1 px-6 bg-white backdrop-blur-sm shadow-sm">
         <div className="relative flex items-center justify-center max-w-5xl mx-auto">
           <div className="absolute left-0">
             <Link href="/" className="p-2 rounded-full hover:bg-gray-100 transition-all duration-300">
@@ -148,7 +148,7 @@ export default function Comparacao() {
             </Link>
           </div>
 
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800 -mt-1">
+          <h1 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800 mb-1">
             Comparação
           </h1>
         </div>
