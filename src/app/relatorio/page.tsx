@@ -1756,7 +1756,7 @@ export default function Relatorio() {
                       <div className="text-center">
                         <p className="text-sm text-blue-700 font-medium">Diferença:</p>
                         <p className={`text-lg font-bold ${(relatoriosComparacao.recente?.peso || dadosSalvos[0]?.peso) < (relatoriosComparacao.anterior?.peso || dadosSalvos[1]?.peso) ? 'text-green-600' : 'text-red-600'}`}>
-                          {(relatoriosComparacao.recente?.peso || dadosSalvos[0]?.peso) < (relatoriosComparacao.anterior?.peso || dadosSalvos[1]?.peso) ? "-" : "+"}{Math.abs((relatoriosComparacao.recente?.peso || dadosSalvos[0]?.peso) - (relatoriosComparacao.anterior?.peso || dadosSalvos[1]?.peso))} kg
+                          {(relatoriosComparacao.recente?.peso || dadosSalvos[0]?.peso) < (relatoriosComparacao.anterior?.peso || dadosSalvos[1]?.peso) ? "-" : "+"}{Math.abs((relatoriosComparacao.recente?.peso || dadosSalvos[0]?.peso) - (relatoriosComparacao.anterior?.peso || dadosSalvos[1]?.peso)).toFixed(1)} kg
                         </p>
                       </div>
                     </div>
@@ -1775,7 +1775,7 @@ export default function Relatorio() {
                         {relatoriosComparacao.recente?.peso || dadosSalvos[0]?.peso || 77} kg
                         {(relatoriosComparacao.recente?.peso || dadosSalvos[0]?.peso) && (relatoriosComparacao.anterior?.peso || dadosSalvos[1]?.peso) && (
                           <span className={`text-sm ${(relatoriosComparacao.recente?.peso || dadosSalvos[0]?.peso) < (relatoriosComparacao.anterior?.peso || dadosSalvos[1]?.peso) ? 'text-green-600' : 'text-red-600'}`}>
-                            {" "}({(relatoriosComparacao.recente?.peso || dadosSalvos[0]?.peso) < (relatoriosComparacao.anterior?.peso || dadosSalvos[1]?.peso) ? "-" : "+"}{Math.abs((relatoriosComparacao.recente?.peso || dadosSalvos[0]?.peso) - (relatoriosComparacao.anterior?.peso || dadosSalvos[1]?.peso))} kg)
+                            {" "}({(relatoriosComparacao.recente?.peso || dadosSalvos[0]?.peso) < (relatoriosComparacao.anterior?.peso || dadosSalvos[1]?.peso) ? "-" : "+"}{Math.abs((relatoriosComparacao.recente?.peso || dadosSalvos[0]?.peso) - (relatoriosComparacao.anterior?.peso || dadosSalvos[1]?.peso)).toFixed(1)} kg)
                           </span>
                         )}
                       </p>
