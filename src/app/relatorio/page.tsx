@@ -780,38 +780,41 @@ export default function Relatorio() {
             const xPos = margin + coluna * (espacoHorizontalPorFoto + 5);
             const yPosImagem = yPos + linha * (alturaMaximaPorFoto + 15);
             
-            // Criar imagem temporária para obter dimensões originais
-            const img = new Image();
-            img.src = fotosProcessadas[i];
-            
-            // Calcular largura e altura preservando proporção
-            let larguraFoto = espacoHorizontalPorFoto;
-            let alturaFoto = (img.height / img.width) * larguraFoto;
-            
-            // Se a altura calculada for maior que o espaço disponível, ajustar pela altura
-            if (alturaFoto > alturaMaximaPorFoto) {
-              alturaFoto = alturaMaximaPorFoto;
-              larguraFoto = (img.width / img.height) * alturaFoto;
+            try {
+              // Criar imagem temporária para obter dimensões originais
+              const img = new Image();
+              img.src = fotosProcessadas[i];
+              
+              // Definir dimensões seguras para evitar problemas de escala
+              let larguraFoto = Math.min(espacoHorizontalPorFoto, 80); // Limitar a largura máxima
+              let alturaFoto = Math.min(larguraFoto * 1.33, alturaMaximaPorFoto); // Usar proporção padrão
+              
+              // Centralizar a imagem no espaço disponível
+              const xCentrado = xPos + (espacoHorizontalPorFoto - larguraFoto) / 2;
+              
+              // Adicionar a foto sem moldura
+              doc.addImage(
+                fotosProcessadas[i],
+                'JPEG',
+                xCentrado,
+                yPosImagem,
+                larguraFoto,
+                alturaFoto
+              );
+              
+              // Adicionar nome da foto abaixo da imagem
+              doc.setFontSize(10);
+              doc.setTextColor(60, 60, 60);
+              const nomeFoto = nomesFotos[i] || `Foto ${i + 1}`;
+              doc.text(nomeFoto, xPos + (espacoHorizontalPorFoto / 2), yPosImagem + alturaFoto + 5, { align: 'center' });
+            } catch (error) {
+              console.error(`Erro ao adicionar foto ${i}:`, error);
+              
+              // Adicionar mensagem de erro no lugar da foto
+              doc.setFontSize(10);
+              doc.setTextColor(255, 0, 0);
+              doc.text(`Não foi possível carregar a foto ${i+1}`, xPos + (espacoHorizontalPorFoto / 2), yPosImagem + 20, { align: 'center' });
             }
-            
-            // Centralizar a imagem no espaço disponível
-            const xCentrado = xPos + (espacoHorizontalPorFoto - larguraFoto) / 2;
-            
-            // Adicionar a foto sem moldura
-            doc.addImage(
-              fotosProcessadas[i],
-              'JPEG',
-              xCentrado,
-              yPosImagem,
-              larguraFoto,
-              alturaFoto
-            );
-            
-            // Adicionar nome da foto abaixo da imagem
-            doc.setFontSize(10);
-            doc.setTextColor(60, 60, 60);
-            const nomeFoto = nomesFotos[i] || `Foto ${i + 1}`;
-            doc.text(nomeFoto, xPos + (espacoHorizontalPorFoto / 2), yPosImagem + alturaFoto + 5, { align: 'center' });
           }
         }
         
