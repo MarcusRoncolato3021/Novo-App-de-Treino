@@ -252,11 +252,19 @@ export default function Comparacao() {
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-center"
                   >
                     <option value="">Selecione uma data</option>
-                    {datasDisponiveis.map((data, index) => (
-                      <option key={`antes-${data}-${index}`} value={data}>
-                        {formatarDataDDMMYY(new Date(data))}
-                      </option>
-                    ))}
+                    {datasDisponiveis.map((data, index) => {
+                      // Encontrar o registro correspondente para mostrar a data formatada
+                      const registro = fotosProgresso.find(foto => {
+                        const dataISO = foto.data.toISOString().split('T')[0];
+                        return dataISO === data;
+                      });
+                      
+                      return (
+                        <option key={`antes-${data}-${index}`} value={data}>
+                          {registro ? formatarDataDDMMYY(registro.data) : formatarDataDDMMYY(new Date(data))}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <div>
@@ -269,11 +277,19 @@ export default function Comparacao() {
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-center"
                   >
                     <option value="">Selecione uma data</option>
-                    {datasDisponiveis.map((data, index) => (
-                      <option key={`depois-${data}-${index}`} value={data}>
-                        {formatarDataDDMMYY(new Date(data))}
-                      </option>
-                    ))}
+                    {datasDisponiveis.map((data, index) => {
+                      // Encontrar o registro correspondente para mostrar a data formatada
+                      const registro = fotosProgresso.find(foto => {
+                        const dataISO = foto.data.toISOString().split('T')[0];
+                        return dataISO === data;
+                      });
+                      
+                      return (
+                        <option key={`depois-${data}-${index}`} value={data}>
+                          {registro ? formatarDataDDMMYY(registro.data) : formatarDataDDMMYY(new Date(data))}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>
@@ -281,12 +297,12 @@ export default function Comparacao() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex justify-center items-center">
-                    <h3 className="text-lg font-semibold text-gray-800 text-center">
+                    <h3 className="text-lg font-semibold text-gray-800">
                       {dataAntes && fotoAntes ? formatarDataDDMMYY(fotoAntes.data) : 'Selecione uma data'}
                     </h3>
                     {fotoAntes && (
-                      <div className="text-sm font-medium text-gray-600 ml-2">
-                        {fotoAntes.peso} kg
+                      <div className="ml-2 px-2 py-1 bg-primary-50 rounded-md">
+                        <span className="text-sm font-semibold text-primary-700">{fotoAntes.peso} kg</span>
                       </div>
                     )}
                   </div>
@@ -307,12 +323,12 @@ export default function Comparacao() {
 
                 <div className="space-y-2">
                   <div className="flex justify-center items-center">
-                    <h3 className="text-lg font-semibold text-gray-800 text-center">
+                    <h3 className="text-lg font-semibold text-gray-800">
                       {dataDepois && fotoDepois ? formatarDataDDMMYY(fotoDepois.data) : 'Selecione uma data'}
                     </h3>
                     {fotoDepois && (
-                      <div className="text-sm font-medium text-gray-600 ml-2">
-                        {fotoDepois.peso} kg
+                      <div className="ml-2 px-2 py-1 bg-primary-50 rounded-md">
+                        <span className="text-sm font-semibold text-primary-700">{fotoDepois.peso} kg</span>
                       </div>
                     )}
                   </div>
@@ -356,10 +372,16 @@ export default function Comparacao() {
               <h2 className="text-white font-semibold">
                 {fotoAntes ? formatarDataDDMMYY(fotoAntes.data) : ''} vs {fotoDepois ? formatarDataDDMMYY(fotoDepois.data) : ''}
               </h2>
-              <div className="text-white/80 text-sm">
-                {fotoAntes?.peso} kg vs {fotoDepois?.peso} kg
+              <div className="text-white/80 text-sm flex items-center">
+                <div className="text-white bg-primary-900/50 px-2 py-1 rounded-md">
+                  {fotoAntes?.peso} kg
+                </div>
+                <span className="mx-2">vs</span>
+                <div className="text-white bg-primary-900/50 px-2 py-1 rounded-md">
+                  {fotoDepois?.peso} kg
+                </div>
                 {fotoAntes && fotoDepois && (
-                  <span className={`ml-2 ${fotoDepois.peso < fotoAntes.peso ? 'text-green-500' : 'text-red-500'}`}>
+                  <span className={`ml-2 px-2 py-1 rounded-md ${fotoDepois.peso < fotoAntes.peso ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
                     ({fotoDepois.peso < fotoAntes.peso ? '-' : '+'}{Math.abs(fotoDepois.peso - fotoAntes.peso).toFixed(1)} kg)
                   </span>
                 )}
