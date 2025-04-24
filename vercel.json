@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "app-treino",
   "builds": [
     {
       "src": "package.json",
@@ -12,5 +11,10 @@
       "src": "/(.*)",
       "dest": "/$1"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NODE_OPTIONS": "--max-old-space-size=4096"
+    }
+  }
 } 
