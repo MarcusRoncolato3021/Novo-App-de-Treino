@@ -236,7 +236,7 @@ export default function Home() {
             <Link
               key={treino.id}
               href={`/treino/${treino.id}`}
-              className={`block bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 ${
+              className={`block bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 mb-4 ${
                 treino.ativo === false ? 'opacity-70' : ''
               }`}
             >
