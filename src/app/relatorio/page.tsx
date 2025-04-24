@@ -403,7 +403,7 @@ export default function Relatorio() {
         // === PÁGINA 3: INFORMAÇÕES DETALHADAS ===
         doc.addPage();
         yPos = margin;
-
+        
         // Função auxiliar para calcular altura necessária para o texto
         const calcularAlturaTexto = (texto: string, larguraDisponivel: number, tamanhoFonte: number) => {
           doc.setFontSize(tamanhoFonte);
@@ -411,22 +411,27 @@ export default function Relatorio() {
           return (linhas.length * (tamanhoFonte * 0.5)) + 10; // 10px de padding
         };
         
-        // Cabeçalho da página de informações
-        doc.setFontSize(20);
+        // Titulo da página de informações
+        doc.setFontSize(16);
         doc.setTextColor(40, 80, 200);
-        doc.text('Detalhes do Relatório', pageWidth / 2, yPos + 10, { align: 'center' });
-        yPos += 25;
-
-        // Configuração da tabela
+        doc.text("Informações Detalhadas", pageWidth / 2, yPos, { align: 'center' });
+        yPos += 8;
+        
+        // Linha separadora
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 12;
+        
+        // Cabeçalho da tabela de comparação
+        const rowHeight = 10;
+        const cellPadding = 5;
         const colWidth = (pageWidth - (margin * 2)) / 2;
-        const rowHeight = 8;
-        const cellPadding = 4;
-
-        // Cabeçalhos das colunas
+        
         doc.setFillColor(40, 80, 200);
-        doc.rect(margin, yPos, pageWidth - (margin * 2), rowHeight + 4, 'F');
-
-        doc.setFontSize(10);
+        // Manter o preenchimento, remover apenas a borda
+        doc.rect(margin, yPos, pageWidth - (margin * 2), rowHeight + 2, 'F');
+        
+        doc.setFontSize(11);
         doc.setTextColor(255, 255, 255);
         const textoAnterior = `Relatório Anterior (${formatarDataDDMMYY(new Date(relatorioAnterior.data))})`;
         const textoRecente = `Relatório Atual (${formatarDataDDMMYY(new Date(relatorioRecente.data))})`;
@@ -690,8 +695,9 @@ export default function Relatorio() {
         }
 
         // Adicionar bordas sutis ao redor de toda a página (apenas primeira página)
-        doc.setDrawColor(200, 200, 200);
-        doc.rect(margin, margin + 25, pageWidth - (margin * 2), pageHeight - (margin * 2) - 25);
+        // Removendo esta linha para eliminar a moldura
+        // doc.setDrawColor(200, 200, 200);
+        // doc.rect(margin, margin + 25, pageWidth - (margin * 2), pageHeight - (margin * 2) - 25);
         
         // Função auxiliar para processar imagem
         const processarImagem = (imageBase64: string): Promise<string> => {
