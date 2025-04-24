@@ -31,7 +31,7 @@ export default function CardioPage() {
     'Outro'
   ];
 
-  const formatarData = (data: Date) => {
+  const formatarDataDDMMYY = (data: Date) => {
     return data.toLocaleDateString('pt-BR');
   };
 
@@ -246,7 +246,7 @@ export default function CardioPage() {
                     <div className="flex flex-col space-y-3">
                       <div className="flex items-center justify-center space-x-2">
                         <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-500">{formatarData(exercicio.data)}</span>
+                          <span className="text-sm text-gray-500">{formatarDataDDMMYY(exercicio.data)}</span>
                           <button
                             onClick={async () => {
                               if (exercicio.id && window.confirm('Deseja excluir este exercício?')) {
