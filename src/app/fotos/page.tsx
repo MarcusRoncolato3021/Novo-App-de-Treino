@@ -96,7 +96,24 @@ function FotosContent() {
 
   const handleSalvar = async () => {
     try {
-      await db.fotosProgresso.add(fotos);
+      // Ajuste da data para meio-dia para evitar problemas de fuso horário
+      const dataAjustada = new Date();
+      const dataComHoraPadrao = new Date(
+        dataAjustada.getFullYear(),
+        dataAjustada.getMonth(),
+        dataAjustada.getDate(),
+        12, 0, 0
+      );
+      
+      console.log('Salvando fotos com data ajustada:', dataComHoraPadrao.toISOString());
+      
+      // Criar objeto com a data ajustada
+      const fotosObj = {
+        ...fotos,
+        data: dataComHoraPadrao
+      };
+      
+      await db.fotosProgresso.add(fotosObj);
       setFotos({
         data: new Date(),
         frente: null,

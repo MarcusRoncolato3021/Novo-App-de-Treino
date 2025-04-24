@@ -6,6 +6,7 @@ import { db, TipoSerie, TipoExecucao } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 interface HistoricoRegistro {
   id?: number;
@@ -31,6 +32,10 @@ export default function TreinoPage() {
   const [modalAberto, setModalAberto] = useState(false);
   const [editandoNome, setEditandoNome] = useState(false);
   const [novoNome, setNovoNome] = useState('');
+  const [modoReordenar, setModoReordenar] = useState(false);
+  const [exerciciosOrdenados, setExerciciosOrdenados] = useState<any[]>([]);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [exercicioSendoArrastado, setExercicioSendoArrastado] = useState<number | null>(null);
 
   // Carregar o estado dos exercícios expandidos do localStorage
   useEffect(() => {
@@ -62,8 +67,30 @@ export default function TreinoPage() {
     () => db.exercicios
       .where('treinoId')
       .equals(treinoId)
-      .toArray()
+      .toArray(),
+    [treinoId]
   );
+
+  // Atualizar a lista ordenada quando os exercícios mudarem
+  useEffect(() => {
+    if (exercicios) {
+      // Ordenar os exercícios por ordem (se tiver) ou manter a ordem atual
+      const ordenados = [...exercicios].sort((a, b) => {
+        // Se ambos têm ordem definida, ordenar por ordem
+        if (a.ordem !== undefined && b.ordem !== undefined) {
+          return a.ordem - b.ordem;
+        }
+        // Se apenas a tem ordem definida, a vem primeiro
+        if (a.ordem !== undefined) return -1;
+        // Se apenas b tem ordem definida, b vem primeiro
+        if (b.ordem !== undefined) return 1;
+        // Se nenhum tem ordem, manter ordem original (por ID)
+        return a.id! - b.id!;
+      });
+      
+      setExerciciosOrdenados(ordenados);
+    }
+  }, [exercicios]);
 
   const historicoExercicios = useLiveQuery(
     () => {
@@ -157,6 +184,62 @@ export default function TreinoPage() {
     setModalAberto(true);
   };
 
+  // Funções para manipulação de longo toque
+  const handleLongPressStart = (exercicioId: number) => {
+    // Iniciar um timer para detectar pressionamento longo (500ms)
+    const timer = setTimeout(() => {
+      setModoReordenar(true);
+      toast.success('Modo de reordenação ativado! Arraste os exercícios para reordená-los.');
+    }, 500);
+    
+    setLongPressTimer(timer);
+    setExercicioSendoArrastado(exercicioId);
+  };
+
+  const handleLongPressEnd = () => {
+    // Cancelar o timer se o usuário soltar antes do tempo
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+    setExercicioSendoArrastado(null);
+  };
+
+  // Função para lidar com o resultado do arrastar e soltar
+  const handleDragEnd = async (result: DropResult) => {
+    // Se não houve destino ou o destino é inválido, não fazer nada
+    if (!result.destination) return;
+    
+    // Se a posição não mudou, não fazer nada
+    if (result.destination.index === result.source.index) return;
+    
+    // Reordenar a lista
+    const itens = Array.from(exerciciosOrdenados);
+    const [itemRemovido] = itens.splice(result.source.index, 1);
+    itens.splice(result.destination.index, 0, itemRemovido);
+    
+    // Atualizar a ordem no estado
+    setExerciciosOrdenados(itens);
+    
+    try {
+      // Atualizar a ordem na base de dados
+      await Promise.all(
+        itens.map((exercicio, index) => {
+          return db.exercicios.update(exercicio.id!, { ordem: index });
+        })
+      );
+      
+      toast.success('Exercícios reordenados com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar a ordem dos exercícios:', error);
+      toast.error('Erro ao salvar a ordem dos exercícios');
+    }
+  };
+
+  const sairModoReordenacao = () => {
+    setModoReordenar(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 pb-24">
       <header className="pt-4 pb-2 px-6 bg-white backdrop-blur-sm shadow-sm">
@@ -239,6 +322,20 @@ export default function TreinoPage() {
               </svg>
             </button>
           </div>
+
+          {/* Adicionar botão para sair do modo de reordenação */}
+          {modoReordenar && (
+            <div className="absolute right-0 flex items-center">
+              <button
+                onClick={sairModoReordenacao}
+                className="p-2 rounded-full bg-green-100 text-green-700 hover:bg-green-200 transition-all duration-300"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -246,99 +343,158 @@ export default function TreinoPage() {
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <div className="text-center mb-6">
             <p className="text-gray-600 text-base">{treino?.diaDaSemana !== undefined ? diasDaSemana[treino.diaDaSemana] : ''}</p>
+            
+            {modoReordenar && (
+              <div className="mt-2 bg-blue-50 text-blue-700 p-2 rounded-lg text-sm">
+                Arraste os exercícios para reorganizar a ordem
+              </div>
+            )}
           </div>
 
-          <div className="space-y-3">
-            {exercicios?.map((exercicio) => (
-              <div
-                key={exercicio.id}
-                className="block bg-gray-50 rounded-xl p-3"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <Link
-                    href={`/exercicio/${exercicio.id}`}
-                    className="flex-1"
-                  >
-                    <h3 className="text-base font-medium text-gray-800">
-                      {exercicio.nome} - {exercicio.tipoExecucao === 'SIMP' ? 'Simp' : 'Comp'}
-                    </h3>
-                  </Link>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => exercicio.id && toggleExercicio(exercicio.id)}
-                      className="text-gray-400 p-1 hover:text-gray-500"
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="exercicios">
+              {(provided) => (
+                <div 
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                  className="space-y-3"
+                >
+                  {exerciciosOrdenados.map((exercicio, index) => (
+                    <Draggable 
+                      key={exercicio.id} 
+                      draggableId={`exercicio-${exercicio.id}`} 
+                      index={index}
+                      isDragDisabled={!modoReordenar}
                     >
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        fill="none" 
-                        viewBox="0 0 24 24" 
-                        strokeWidth={2} 
-                        stroke="currentColor" 
-                        className={`w-5 h-5 transform transition-transform ${exercicio.id && expandedExercicios[exercicio.id] ? 'rotate-90' : ''}`}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => exercicio.id && handleDeleteExercicio(exercicio.id)}
-                      className="text-red-400 p-1 hover:text-red-500"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                {exercicio.id && expandedExercicios[exercicio.id] && (
-                  historicoExercicios && historicoExercicios[exercicio.id]?.length > 0 ? (
-                    <div className="text-sm text-gray-600 space-y-1">
-                      {(() => {
-                        // Agrupar registros por tipo e ordem
-                        const registrosPorTipoEOrdem: { [key: string]: HistoricoRegistro[] } = {};
-                        
-                        historicoExercicios[exercicio.id].forEach((registro: HistoricoRegistro) => {
-                          const chave = `${registro.tipo}-${registro.ordem}`;
-                          if (!registrosPorTipoEOrdem[chave]) {
-                            registrosPorTipoEOrdem[chave] = [];
-                          }
-                          registrosPorTipoEOrdem[chave].push(registro);
-                        });
-                        
-                        // Pegar apenas o registro mais recente de cada grupo
-                        const registrosMaisRecentes: HistoricoRegistro[] = Object.values(registrosPorTipoEOrdem)
-                          .map(registros => 
-                            // Ordenar por data (mais recente primeiro) e pegar o primeiro
-                            registros.sort((a, b) => 
-                              new Date(b.data).getTime() - new Date(a.data).getTime()
-                            )[0]
-                          )
-                          // Filtrar apenas os work-sets
-                          .filter(registro => registro.tipo === 'work-set')
-                          // Ordenar por ordem
-                          .sort((a, b) => a.ordem - b.ordem);
-                        
-                        // Retornar os elementos JSX
-                        return registrosMaisRecentes.map((registro, index) => (
-                          <div key={index} className="flex items-center space-x-2">
-                            <span className="font-medium">{getTituloSerie(registro.tipo, registro.ordem)}:</span>
-                            <span>{registro.peso}kg</span>
-                            <span>×</span>
-                            <span>{registro.repeticoes} reps</span>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          className={`block bg-gray-50 rounded-xl p-3 transition-shadow ${
+                            snapshot.isDragging ? 'shadow-lg bg-gray-100' : ''
+                          } ${exercicioSendoArrastado === exercicio.id ? 'bg-gray-100' : ''}`}
+                          onTouchStart={() => handleLongPressStart(exercicio.id!)}
+                          onTouchEnd={handleLongPressEnd}
+                          onTouchMove={handleLongPressEnd}
+                          onMouseDown={() => handleLongPressStart(exercicio.id!)}
+                          onMouseUp={handleLongPressEnd}
+                          onMouseLeave={handleLongPressEnd}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <Link
+                              href={`/exercicio/${exercicio.id}`}
+                              className="flex-1"
+                              onClick={(e) => {
+                                if (modoReordenar) {
+                                  e.preventDefault();
+                                }
+                              }}
+                            >
+                              <h3 className="text-base font-medium text-gray-800">
+                                {exercicio.nome} - {exercicio.tipoExecucao === 'SIMP' ? 'Simp' : 'Comp'}
+                              </h3>
+                            </Link>
+                            <div className="flex items-center space-x-2">
+                              {modoReordenar ? (
+                                <div className="text-gray-400 p-1">
+                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+                                  </svg>
+                                </div>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => exercicio.id && toggleExercicio(exercicio.id)}
+                                    className="text-gray-400 p-1 hover:text-gray-500"
+                                  >
+                                    <svg 
+                                      xmlns="http://www.w3.org/2000/svg" 
+                                      fill="none" 
+                                      viewBox="0 0 24 24" 
+                                      strokeWidth={2} 
+                                      stroke="currentColor" 
+                                      className={`w-5 h-5 transform transition-transform ${exercicio.id && expandedExercicios[exercicio.id] ? 'rotate-90' : ''}`}
+                                    >
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => exercicio.id && handleDeleteExercicio(exercicio.id)}
+                                    className="text-red-400 p-1 hover:text-red-500"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                    </svg>
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
-                        ));
-                      })()}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500">Nenhuma série registrada</p>
-                  )
-                )}
-              </div>
-            ))}
-          </div>
+                          {exercicio.id && expandedExercicios[exercicio.id] && !modoReordenar && (
+                            historicoExercicios && historicoExercicios[exercicio.id]?.length > 0 ? (
+                              <div className="text-sm text-gray-600 space-y-1">
+                                {(() => {
+                                  // Agrupar registros por tipo e ordem
+                                  const registrosPorTipoEOrdem: { [key: string]: HistoricoRegistro[] } = {};
+                                  
+                                  historicoExercicios[exercicio.id].forEach((registro: HistoricoRegistro) => {
+                                    const chave = `${registro.tipo}-${registro.ordem}`;
+                                    if (!registrosPorTipoEOrdem[chave]) {
+                                      registrosPorTipoEOrdem[chave] = [];
+                                    }
+                                    registrosPorTipoEOrdem[chave].push(registro);
+                                  });
+                                  
+                                  // Pegar apenas o registro mais recente de cada grupo
+                                  const registrosMaisRecentes: HistoricoRegistro[] = Object.values(registrosPorTipoEOrdem)
+                                    .map(registros => 
+                                      // Ordenar por data (mais recente primeiro) e pegar o primeiro
+                                      registros.sort((a, b) => 
+                                        new Date(b.data).getTime() - new Date(a.data).getTime()
+                                      )[0]
+                                    )
+                                    // Filtrar apenas os work-sets
+                                    .filter(registro => registro.tipo === 'work-set')
+                                    // Ordenar por ordem
+                                    .sort((a, b) => a.ordem - b.ordem);
+                                  
+                                  // Retornar os elementos JSX
+                                  return registrosMaisRecentes.map((registro, index) => (
+                                    <div key={index} className="flex items-center space-x-2">
+                                      <span className="font-medium">{getTituloSerie(registro.tipo, registro.ordem)}:</span>
+                                      <span>{registro.peso}kg</span>
+                                      <span>×</span>
+                                      <span>{registro.repeticoes} reps</span>
+                                    </div>
+                                  ));
+                                })()}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-500">Nenhuma série registrada</p>
+                            )
+                          )}
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
 
           <Link
             href={`/treino/${treinoId}/adicionar`}
-            className="w-full mt-6 py-3 px-6 bg-primary-600 text-white text-base font-medium rounded-xl hover:bg-primary-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center space-x-2"
+            className={`w-full mt-6 py-3 px-6 ${
+              modoReordenar ? 'bg-gray-400' : 'bg-primary-600 hover:bg-primary-700'
+            } text-white text-base font-medium rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center space-x-2`}
+            onClick={(e) => {
+              if (modoReordenar) {
+                e.preventDefault();
+                toast.error('Saia do modo de reordenação primeiro');
+              }
+            }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />

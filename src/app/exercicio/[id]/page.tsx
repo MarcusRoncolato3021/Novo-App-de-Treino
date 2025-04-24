@@ -45,6 +45,10 @@ export default function ExercicioPage() {
   const [workSetDescanso, setWorkSetDescanso] = useState(2); // Intervalo padrão para work sets em minutos
   const [warmUpDescanso, setWarmUpDescanso] = useState(30); // Intervalo padrão para warm up em segundos
   const [feederDescanso, setFeederDescanso] = useState(1); // Intervalo padrão para feeders em minutos
+  const [cronometroAtivo, setCronometroAtivo] = useState(false);
+  const [tempoRestante, setTempoRestante] = useState(0);
+  const [serieAtual, setSerieAtual] = useState<number | null>(null);
+  const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
 
   const exercicio = useLiveQuery(
     () => db.exercicios.get(exercicioId),
@@ -314,6 +318,112 @@ export default function ExercicioPage() {
     }
     return `${workSetDescanso}min`; // Work Sets
   };
+
+  // Função para iniciar o cronômetro
+  const iniciarCronometro = (serieNum: number) => {
+    // Limpar qualquer intervalo existente
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+
+    // Determinar o tempo de descanso com base no tipo de série
+    let tempoEmSegundos = 0;
+    
+    if (exercicio?.tipoExecucao === 'COMP') {
+      if (serieNum === 1) {
+        tempoEmSegundos = warmUpDescanso; // Warm up (em segundos)
+      } else if (serieNum === 2 || serieNum === 3) {
+        tempoEmSegundos = feederDescanso * 60; // Feeder (em minutos, convertido para segundos)
+      } else {
+        tempoEmSegundos = workSetDescanso * 60; // Work set (em minutos, convertido para segundos)
+      }
+    } else {
+      tempoEmSegundos = workSetDescanso * 60; // Work set para SIMP (em minutos, convertido para segundos)
+    }
+
+    setTempoRestante(tempoEmSegundos);
+    setSerieAtual(serieNum);
+    setCronometroAtivo(true);
+
+    const id = setInterval(() => {
+      setTempoRestante(prev => {
+        if (prev <= 1) {
+          // Quando o tempo acabar, tocar um som e limpar o intervalo
+          clearInterval(id);
+          setCronometroAtivo(false);
+          // Tentar tocar som de notificação
+          try {
+            const audio = new Audio('/notification.mp3'); // Som de notificação
+            audio.play();
+          } catch (error) {
+            console.error('Erro ao tocar o som de notificação:', error);
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    setIntervalId(id);
+  };
+
+  // Função para pausar/continuar o cronômetro
+  const toggleCronometro = () => {
+    if (cronometroAtivo) {
+      // Pausar
+      if (intervalId) {
+        clearInterval(intervalId);
+        setIntervalId(null);
+      }
+    } else {
+      // Continuar
+      const id = setInterval(() => {
+        setTempoRestante(prev => {
+          if (prev <= 1) {
+            clearInterval(id);
+            setCronometroAtivo(false);
+            try {
+              const audio = new Audio('/notification.mp3');
+              audio.play();
+            } catch (error) {
+              console.error('Erro ao tocar o som de notificação:', error);
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      setIntervalId(id);
+    }
+    setCronometroAtivo(prev => !prev);
+  };
+
+  // Função para parar o cronômetro
+  const pararCronometro = () => {
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+    setCronometroAtivo(false);
+    setTempoRestante(0);
+    setSerieAtual(null);
+    setIntervalId(null);
+  };
+
+  // Formatar o tempo restante para exibição (mm:ss)
+  const formatarTempoRestante = () => {
+    const minutos = Math.floor(tempoRestante / 60);
+    const segundos = tempoRestante % 60;
+    return `${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+  };
+
+  // Limpar o intervalo quando o componente for desmontado
+  useEffect(() => {
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [intervalId]);
 
   // Log para debug
   useEffect(() => {
@@ -706,7 +816,7 @@ export default function ExercicioPage() {
                             {serieNumero === 1 ? 'Warm Up' : `Feeder ${serieNumero - 1}`}
                           </h3>
                           <div className="flex items-center w-10 justify-end">
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center">
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center group relative">
                               <span>{getTempoDescanso(serieNumero, exercicio.tipoExecucao)}</span>
                               <button 
                                 onClick={(e) => {
@@ -737,6 +847,19 @@ export default function ExercicioPage() {
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  iniciarCronometro(serieNumero);
+                                }}
+                                className="ml-1 text-blue-600 hover:bg-blue-200 p-0.5 rounded"
+                                title="Iniciar cronômetro"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
                                 </svg>
                               </button>
                             </span>
@@ -780,18 +903,30 @@ export default function ExercicioPage() {
                           {exercicio.tipoExecucao === 'COMP' ? `Work Set ${workSetNumero}` : `Work Set ${serieNumero}`}
                         </h3>
                         <div className="flex items-center w-10 justify-end">
-                          <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center">
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center group relative">
                             <span>{getTempoDescanso(serieNumero, exercicio.tipoExecucao)}</span>
                             <button 
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                const novoTempo = prompt('Tempo de descanso (em minutos):', workSetDescanso.toString());
+                                const novoTempo = prompt(
+                                  serieNumero === 1 
+                                    ? 'Tempo de descanso (em segundos):' 
+                                    : 'Tempo de descanso (em minutos):', 
+                                  serieNumero === 1 
+                                    ? warmUpDescanso.toString() 
+                                    : feederDescanso.toString()
+                                );
                                 if (novoTempo !== null) {
                                   const tempo = parseInt(novoTempo);
                                   if (!isNaN(tempo) && tempo > 0) {
-                                    setWorkSetDescanso(tempo);
-                                    toast.success(`Tempo de descanso atualizado para ${tempo} minutos`);
+                                    if (serieNumero === 1) {
+                                      setWarmUpDescanso(tempo);
+                                      toast.success(`Tempo de descanso atualizado para ${tempo} segundos`);
+                                    } else {
+                                      setFeederDescanso(tempo);
+                                      toast.success(`Tempo de descanso atualizado para ${tempo} minutos`);
+                                    }
                                   }
                                 }
                               }}
@@ -799,6 +934,19 @@ export default function ExercicioPage() {
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                iniciarCronometro(serieNumero);
+                              }}
+                              className="ml-1 text-blue-600 hover:bg-blue-200 p-0.5 rounded"
+                              title="Iniciar cronômetro"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
                               </svg>
                             </button>
                           </span>
@@ -854,6 +1002,41 @@ export default function ExercicioPage() {
                     </div>
                   );
                 })}
+              </div>
+
+              <div className="mt-4 mb-6">
+                {cronometroAtivo || tempoRestante > 0 ? (
+                  <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                    <div className="flex flex-col items-center justify-center">
+                      <h3 className="text-base font-semibold text-blue-800 mb-2">
+                        {serieAtual !== null && exercicio ? 
+                          `Intervalo: ${getTituloSerie(serieAtual, exercicio.tipoExecucao)}` : 
+                          'Cronômetro de descanso'}
+                      </h3>
+                      <div className="text-3xl font-bold text-blue-700 mb-2">
+                        {formatarTempoRestante()}
+                      </div>
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={toggleCronometro}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                            cronometroAtivo
+                              ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                              : 'bg-green-600 hover:bg-green-700 text-white'
+                          }`}
+                        >
+                          {cronometroAtivo ? 'Pausar' : 'Continuar'}
+                        </button>
+                        <button
+                          onClick={pararCronometro}
+                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium"
+                        >
+                          Parar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               <button
