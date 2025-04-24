@@ -649,45 +649,52 @@ export default function Relatorio() {
             }
           }
           
-          // Calcular dimensões das fotos
+          // Calcular espaço disponível para fotos na página atual
+          const espacoDisponivel = pageHeight - margin - yPos - 20; // 20px de margem no final
+          
+          // Determinar o layout ideal para as fotos
+          // Se tivermos apenas 1 foto, usar layout de 1 coluna
+          // Se tivermos 2 ou mais fotos, usar layout de 2 colunas
+          const numColunas = fotosProcessadas.length === 1 ? 1 : 2;
+          const numLinhas = Math.ceil(fotosProcessadas.length / numColunas);
+          
+          // Calcular a altura máxima que cada foto pode ter
+          // Considerando um espaçamento de 5mm entre fotos
+          const alturaMaxima = (espacoDisponivel - ((numLinhas - 1) * 5)) / numLinhas;
           const espacoHorizontal = pageWidth - (margin * 2);
-          const numColunas = Math.min(2, fotosProcessadas.length); // Máximo 2 fotos por linha
-          const larguraFoto = (espacoHorizontal / numColunas) - 5;
-          const alturaFoto = larguraFoto * 1.33; // Proporção aproximada
+          const larguraFoto = (espacoHorizontal / numColunas) - (numColunas > 1 ? 5 : 0); 
+          
+          // Se a relação de aspecto for 4:3 (1.33), ajustar a altura máxima para manter a proporção
+          const alturaFoto = Math.min(alturaMaxima, larguraFoto * 1.33);
           
           // Adicionar fotos ao PDF
           let fotoIndex = 0;
-          while (fotoIndex < fotosProcessadas.length) {
-            // Verificar se precisamos de uma nova página
-            if (yPos + alturaFoto > pageHeight - margin) {
-              doc.addPage();
-              yPos = margin;
-            }
+          for (let linha = 0; linha < numLinhas; linha++) {
+            const yPosAtual = yPos + (linha * (alturaFoto + 5));
             
-            // Adicionar fotos em linha
             for (let col = 0; col < numColunas && fotoIndex < fotosProcessadas.length; col++) {
               const xPos = margin + (col * (larguraFoto + 5));
               
               // Adicionar fundo e borda à foto
               doc.setFillColor(250, 250, 250);
-              doc.rect(xPos, yPos, larguraFoto, alturaFoto, 'F');
+              doc.rect(xPos, yPosAtual, larguraFoto, alturaFoto, 'F');
               doc.setDrawColor(200, 200, 200);
-              doc.rect(xPos, yPos, larguraFoto, alturaFoto);
+              doc.rect(xPos, yPosAtual, larguraFoto, alturaFoto);
               
               doc.addImage(
                 fotosProcessadas[fotoIndex],
                 'JPEG',
                 xPos,
-                yPos,
+                yPosAtual,
                 larguraFoto,
                 alturaFoto
               );
               fotoIndex++;
             }
-            
-            // Avançar para a próxima linha
-            yPos += alturaFoto + 10;
           }
+          
+          // Atualizar a posição Y para a próxima seção
+          yPos += (numLinhas * (alturaFoto + 5)) - 5 + 10; // -5 para remover o último espaçamento e +10 para espaço entre seções
         }
         
         // SEGUNDA SEÇÃO: INFORMAÇÕES GERAIS
