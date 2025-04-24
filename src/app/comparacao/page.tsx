@@ -296,13 +296,13 @@ export default function Comparacao() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <div className="flex justify-center items-center">
+                  <div className="flex flex-col items-center justify-center">
                     <h3 className="text-lg font-semibold text-gray-800">
                       {dataAntes && fotoAntes ? formatarDataDDMMYY(fotoAntes.data) : 'Selecione uma data'}
                     </h3>
                     {fotoAntes && (
-                      <div className="ml-2 px-2 py-1 bg-primary-50 rounded-md">
-                        <span className="text-sm font-semibold text-primary-700">{fotoAntes.peso} kg</span>
+                      <div className="mt-1 mb-2 px-3 py-1 bg-primary-50 rounded-md">
+                        <span className="text-base font-semibold text-primary-700">{fotoAntes.peso} kg</span>
                       </div>
                     )}
                   </div>
@@ -322,13 +322,13 @@ export default function Comparacao() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex justify-center items-center">
+                  <div className="flex flex-col items-center justify-center">
                     <h3 className="text-lg font-semibold text-gray-800">
                       {dataDepois && fotoDepois ? formatarDataDDMMYY(fotoDepois.data) : 'Selecione uma data'}
                     </h3>
                     {fotoDepois && (
-                      <div className="ml-2 px-2 py-1 bg-primary-50 rounded-md">
-                        <span className="text-sm font-semibold text-primary-700">{fotoDepois.peso} kg</span>
+                      <div className="mt-1 mb-2 px-3 py-1 bg-primary-50 rounded-md">
+                        <span className="text-base font-semibold text-primary-700">{fotoDepois.peso} kg</span>
                       </div>
                     )}
                   </div>
