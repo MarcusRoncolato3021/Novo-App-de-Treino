@@ -856,9 +856,17 @@ export default function Relatorio() {
 
   // Função para formatar a data no formato dd/mm/yyyy (formato brasileiro)
   function formatarDataDDMMYY(data: Date): string {
-    const dia = String(data.getDate()).padStart(2, '0');
-    const mes = String(data.getMonth() + 1).padStart(2, '0');
-    const ano = data.getFullYear();
+    // Garantir que a data não seja afetada por fuso horário
+    const dataAjustada = new Date(
+      data.getFullYear(),
+      data.getMonth(),
+      data.getDate(),
+      12, 0, 0
+    );
+    
+    const dia = String(dataAjustada.getDate()).padStart(2, '0');
+    const mes = String(dataAjustada.getMonth() + 1).padStart(2, '0');
+    const ano = dataAjustada.getFullYear();
     return `${dia}/${mes}/${ano}`;
   }
 
@@ -925,20 +933,40 @@ export default function Relatorio() {
   // Função para buscar relatórios salvos
   const buscarRelatoriosSalvos = async () => {
     try {
-      const relatorios = await db.relatorios.orderBy('data').reverse().toArray();
-      console.log('Relatórios brutos do banco:', relatorios);
+      // Buscar todos os relatórios salvos
+      const relatorios = await db.relatorios
+        .orderBy('data')
+        .reverse()
+        .toArray();
       
-      return relatorios.map(relatorio => ({
-        id: relatorio.id?.toString() || Date.now().toString(),
-        data: relatorio.data,
-        peso: Number(relatorio.peso) || 0,
-        calorias: relatorio.calorias?.toString() || '',
-        dieta: relatorio.dietaSemanal || '',
-        comentarios: relatorio.comentarioTreino || '',
-        fotos: relatorio.fotos || []
-      }));
+      // Ajustar as datas para evitar problemas de fuso horário
+      const relatoriosAjustados = relatorios.map(relatorio => {
+        // Criar uma nova data com horário fixo de meio-dia
+        const dataOriginal = new Date(relatorio.data);
+        const dataAjustada = new Date(
+          dataOriginal.getFullYear(),
+          dataOriginal.getMonth(),
+          dataOriginal.getDate(),
+          12, 0, 0
+        );
+        
+        // Retornar o relatório com a data ajustada e garantir todos os campos
+        return {
+          id: relatorio.id?.toString() || Date.now().toString(),
+          data: dataAjustada,
+          peso: Number(relatorio.peso) || 0,
+          calorias: relatorio.calorias?.toString() || '',
+          dieta: relatorio.dietaSemanal || '',
+          comentarios: relatorio.comentarioTreino || '',
+          fotos: relatorio.fotos || []
+        };
+      });
+      
+      setDadosSalvos(relatoriosAjustados);
+      return relatoriosAjustados;
     } catch (error) {
       console.error('Erro ao buscar relatórios:', error);
+      toast.error('Erro ao carregar dados. Tente novamente.');
       return [];
     }
   };
@@ -1187,10 +1215,24 @@ export default function Relatorio() {
           if (registro.lateralEsquerda) fotos.push(registro.lateralEsquerda);
           if (registro.lateralDireita) fotos.push(registro.lateralDireita);
           
+          // Ajustar a data para garantir que não haja problemas de fuso horário
+          // Pegar a data original e criar uma data com horário zerado para evitar problemas de fuso
+          const dataOriginal = new Date(registro.data);
+          const dataAjustada = new Date(
+            dataOriginal.getFullYear(),
+            dataOriginal.getMonth(),
+            dataOriginal.getDate(),
+            12, 0, 0 // Meio-dia para evitar problemas de fuso horário
+          );
+          
+          console.log(`Data original: ${dataOriginal.toISOString()}`);
+          console.log(`Data ajustada: ${dataAjustada.toISOString()}`);
+          console.log(`Data formatada: ${formatarDataDDMMYY(dataAjustada)}`);
+          
           // Criar um relatório básico a partir do registro de fotos
           return {
             id: Date.now() + Math.floor(Math.random() * 1000),
-            data: new Date(registro.data),
+            data: dataAjustada,
             peso: registro.peso || 0,
             calorias: 0,
             dietaSemanal: 'Sem informações de dieta',
