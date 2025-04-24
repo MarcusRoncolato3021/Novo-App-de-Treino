@@ -7,6 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 
 export default function HistoricoCardio() {
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
+  const [datesExpanded, setDatesExpanded] = useState<Record<string, boolean>>({});
 
   const historicoCardio = useLiveQuery(
     () => db.cardio
@@ -15,7 +16,7 @@ export default function HistoricoCardio() {
       .toArray()
   );
 
-  const formatarData = (data: Date) => {
+  const formatarDataDDMMYY = (data: Date) => {
     return data.toLocaleDateString('pt-BR');
   };
 
@@ -28,7 +29,7 @@ export default function HistoricoCardio() {
   };
 
   const exerciciosPorData = historicoCardio?.reduce((acc, exercicio) => {
-    const data = formatarData(exercicio.data);
+    const data = formatarDataDDMMYY(exercicio.data);
     if (!acc[data]) {
       acc[data] = [];
     }
