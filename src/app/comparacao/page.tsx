@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { db, FotoProgresso } from '@/lib/db';
-import { useLiveQuery } from 'dexie-react-hooks';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 
 const tiposFoto = [
   { id: 'frente', nome: 'Frente', icone: '👤' },
@@ -20,90 +20,121 @@ export default function Comparacao() {
   const [fotoDepois, setFotoDepois] = useState<FotoProgresso | null>(null);
   const [modoTelaCheia, setModoTelaCheia] = useState(false);
   const [fotosProgresso, setFotosProgresso] = useState<FotoProgresso[]>([]);
-  const [datasDisponiveisFormatadas, setDatasDisponiveisFormatadas] = useState<string[]>([]);
+  const [datasDisponiveis, setDatasDisponiveis] = useState<string[]>([]);
+  const [carregando, setCarregando] = useState(true);
 
-  // Função para normalizar datas e garantir consistência com meio-dia
-  const normalizarData = (data: Date): Date => {
-    return new Date(
-      data.getFullYear(),
-      data.getMonth(),
-      data.getDate(),
-      12, 0, 0
-    );
-  };
+  // Função para formatar a data no formato DD/MM/YYYY
+  function formatarDataDDMMYY(data: Date): string {
+    return data.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  }
 
-  // Função para buscar todos os registros de fotos e normalizar datas
-  const buscarRegistrosFotos = async () => {
+  // Efeito para carregar os dados iniciais
+  useEffect(() => {
+    buscarHistoricoFotos();
+  }, []);
+
+  // Função para buscar o histórico de fotos e preparar para a comparação
+  const buscarHistoricoFotos = async () => {
     try {
-      console.log("Buscando registros de fotos...");
+      setCarregando(true);
+      console.log("Buscando histórico de fotos para comparação...");
       
-      // Buscar todas as fotos
+      // Buscar todos os registros de fotos de progresso
       const registros = await db.fotosProgresso
         .orderBy('data')
         .reverse()
         .toArray();
       
-      console.log(`Encontrados ${registros.length} registros de fotos`);
+      console.log("Registros de fotos encontrados:", registros.length);
       
-      // Normalizar as datas de todos os registros
-      const registrosNormalizados = registros.map(registro => {
+      if (registros.length === 0) {
+        setCarregando(false);
+        toast.error("Nenhum registro de foto encontrado");
+        return;
+      }
+      
+      // Resolver problema de fuso horário para todos os registros de fotos
+      const registrosAjustados = registros.map(registro => {
         const dataOriginal = new Date(registro.data);
+        // Criar nova data às 12:00 para evitar problemas de fuso
+        const dataCorrigida = new Date(
+          dataOriginal.getFullYear(),
+          dataOriginal.getMonth(),
+          dataOriginal.getDate(),
+          12, 0, 0
+        );
         
-        // Criar uma cópia do registro com a data normalizada
         return {
           ...registro,
-          data: normalizarData(dataOriginal)
+          data: dataCorrigida
         };
       });
       
-      // Armazenar os registros normalizados
-      setFotosProgresso(registrosNormalizados);
+      console.log("Datas ajustadas para registros de fotos");
       
-      // Extrair apenas as datas formatadas para os selects
-      const datasISOString = registrosNormalizados.map(registro => 
+      // Extrair apenas as datas para o select no formato ISO
+      const datasISO = registrosAjustados.map(registro => 
         registro.data.toISOString().split('T')[0]
       );
       
-      setDatasDisponiveisFormatadas(datasISOString);
+      setFotosProgresso(registrosAjustados);
+      setDatasDisponiveis(datasISO);
       
-      console.log("Registros de fotos carregados com sucesso.");
+      console.log("Dados preparados para comparação:", datasISO.length, "datas disponíveis");
+      
+      if (datasISO.length >= 2) {
+        // Selecionar automaticamente as duas datas mais recentes
+        setDataDepois(datasISO[0]);
+        setDataAntes(datasISO[1]);
+      }
+      
+      setCarregando(false);
     } catch (error) {
-      console.error("Erro ao carregar registros de fotos:", error);
+      console.error('Erro ao buscar histórico de fotos:', error);
+      toast.error("Erro ao carregar os dados de fotos");
+      setCarregando(false);
     }
   };
 
-  // Buscar fotos ao carregar o componente
+  // Efeito para buscar fotos quando as datas mudarem
   useEffect(() => {
-    buscarRegistrosFotos();
-  }, []);
-
-  // Buscar fotos quando as datas mudarem
-  useEffect(() => {
-    const buscarFotosParaComparacao = () => {
+    const buscarFotosParaComparacao = async () => {
       if (!dataAntes || !dataDepois || dataAntes === dataDepois || fotosProgresso.length === 0) {
         setFotoAntes(null);
         setFotoDepois(null);
         return;
       }
       
-      console.log("Buscando fotos para comparação com datas:", dataAntes, dataDepois);
+      console.log("Buscando fotos para comparação. Data Antes:", dataAntes, "Data Depois:", dataDepois);
       
-      // Encontrar fotos correspondentes usando as datas normalizadas
-      const fotoAntesEncontrada = fotosProgresso.find(foto => {
-        const dataISO = foto.data.toISOString().split('T')[0];
-        return dataISO === dataAntes;
-      });
-      
-      const fotoDepoisEncontrada = fotosProgresso.find(foto => {
-        const dataISO = foto.data.toISOString().split('T')[0];
-        return dataISO === dataDepois;
-      });
-      
-      console.log("Foto Antes encontrada:", fotoAntesEncontrada);
-      console.log("Foto Depois encontrada:", fotoDepoisEncontrada);
-      
-      setFotoAntes(fotoAntesEncontrada || null);
-      setFotoDepois(fotoDepoisEncontrada || null);
+      try {
+        // Buscar registro para a data "antes"
+        const registroAntes = fotosProgresso.find(registro => {
+          const dataISO = registro.data.toISOString().split('T')[0];
+          return dataISO === dataAntes;
+        });
+        
+        // Buscar registro para a data "depois"
+        const registroDepois = fotosProgresso.find(registro => {
+          const dataISO = registro.data.toISOString().split('T')[0];
+          return dataISO === dataDepois;
+        });
+        
+        console.log("Registro encontrado para data 'antes':", 
+          registroAntes ? formatarDataDDMMYY(registroAntes.data) : "Não encontrado");
+        console.log("Registro encontrado para data 'depois':", 
+          registroDepois ? formatarDataDDMMYY(registroDepois.data) : "Não encontrado");
+        
+        setFotoAntes(registroAntes || null);
+        setFotoDepois(registroDepois || null);
+      } catch (error) {
+        console.error("Erro ao buscar fotos para comparação:", error);
+        toast.error("Erro ao recuperar fotos para comparação");
+      }
     };
     
     buscarFotosParaComparacao();
@@ -112,6 +143,7 @@ export default function Comparacao() {
   const handleDataAntesChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const novaData = e.target.value;
     setDataAntes(novaData);
+    
     // Se a data "depois" for igual à nova data "antes", limpar a data "depois"
     if (novaData === dataDepois) {
       setDataDepois('');
@@ -121,6 +153,7 @@ export default function Comparacao() {
   const handleDataDepoisChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const novaData = e.target.value;
     setDataDepois(novaData);
+    
     // Se a data "antes" for igual à nova data "depois", limpar a data "antes"
     if (novaData === dataAntes) {
       setDataAntes('');
@@ -147,7 +180,6 @@ export default function Comparacao() {
         break;
     }
     
-    console.log(`Tipo: ${tipo}, URL: ${url}`);
     return url;
   };
 
@@ -163,14 +195,6 @@ export default function Comparacao() {
         return 'rotate-0';
     }
   };
-
-  function formatarDataDDMMYY(data: Date): string {
-    return data.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 pb-24">
@@ -191,131 +215,137 @@ export default function Comparacao() {
       </header>
 
       <main className="px-6 py-8 max-w-5xl mx-auto">
-        <div className="space-y-8">
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-800 text-center w-full">Tipo de Foto</h2>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mb-6">
-              {tiposFoto.map(tipo => (
-                <button
-                  key={tipo.id}
-                  onClick={() => setTipoSelecionado(tipo.id as 'frente' | 'costas' | 'lado_esquerdo' | 'lado_direito')}
-                  className={`px-4 py-2 rounded-lg text-center ${
-                    tipoSelecionado === tipo.id
-                      ? 'bg-primary-100 text-primary-700 border-2 border-primary-500'
-                      : 'bg-gray-100 text-gray-700 border border-gray-200'
-                  }`}
-                >
-                  {tipo.nome}
-                </button>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 text-center">
-                  Data Antes
-                </label>
-                <select
-                  value={dataAntes}
-                  onChange={handleDataAntesChange}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-center"
-                >
-                  <option value="">Selecione uma data</option>
-                  {datasDisponiveisFormatadas.map((data, index) => (
-                    <option key={`antes-${data}-${index}`} value={data}>
-                      {formatarDataDDMMYY(new Date(data))}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 text-center">
-                  Data Depois
-                </label>
-                <select
-                  value={dataDepois}
-                  onChange={handleDataDepoisChange}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-center"
-                >
-                  <option value="">Selecione uma data</option>
-                  {datasDisponiveisFormatadas.map((data, index) => (
-                    <option key={`depois-${data}-${index}`} value={data}>
-                      {formatarDataDDMMYY(new Date(data))}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex justify-center items-center">
-                  <h3 className="text-lg font-semibold text-gray-800 text-center">
-                    {dataAntes ? formatarDataDDMMYY(new Date(dataAntes)) : 'Selecione uma data'}
-                  </h3>
-                  {fotoAntes && (
-                    <div className="text-sm font-medium text-gray-600 ml-2">
-                      {fotoAntes.peso} kg
-                    </div>
-                  )}
-                </div>
-                <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100">
-                  {fotoAntes && getUrlFoto(fotoAntes, tipoSelecionado) ? (
-                    <img
-                      src={getUrlFoto(fotoAntes, tipoSelecionado) || ''}
-                      alt="Foto antes"
-                      className={`w-full h-full object-cover ${getImageOrientation(tipoSelecionado)}`}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-center">
-                      Nenhuma foto disponível
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-center items-center">
-                  <h3 className="text-lg font-semibold text-gray-800 text-center">
-                    {dataDepois ? formatarDataDDMMYY(new Date(dataDepois)) : 'Selecione uma data'}
-                  </h3>
-                  {fotoDepois && (
-                    <div className="text-sm font-medium text-gray-600 ml-2">
-                      {fotoDepois.peso} kg
-                    </div>
-                  )}
-                </div>
-                <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100">
-                  {fotoDepois && getUrlFoto(fotoDepois, tipoSelecionado) ? (
-                    <img
-                      src={getUrlFoto(fotoDepois, tipoSelecionado) || ''}
-                      alt="Foto depois"
-                      className={`w-full h-full object-cover ${getImageOrientation(tipoSelecionado)}`}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-center">
-                      Nenhuma foto disponível
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {fotoAntes && fotoDepois && (
-              <button
-                onClick={() => setModoTelaCheia(true)}
-                className="mt-6 w-full bg-primary-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors duration-300 flex items-center justify-center gap-2"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                </svg>
-                Comparar em Tela Cheia
-              </button>
-            )}
+        {carregando ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-8">
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-800 text-center w-full">Tipo de Foto</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mb-6">
+                {tiposFoto.map(tipo => (
+                  <button
+                    key={tipo.id}
+                    onClick={() => setTipoSelecionado(tipo.id as 'frente' | 'costas' | 'lado_esquerdo' | 'lado_direito')}
+                    className={`px-4 py-2 rounded-lg text-center ${
+                      tipoSelecionado === tipo.id
+                        ? 'bg-primary-100 text-primary-700 border-2 border-primary-500'
+                        : 'bg-gray-100 text-gray-700 border border-gray-200'
+                    }`}
+                  >
+                    {tipo.nome}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 text-center">
+                    Data Antes
+                  </label>
+                  <select
+                    value={dataAntes}
+                    onChange={handleDataAntesChange}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-center"
+                  >
+                    <option value="">Selecione uma data</option>
+                    {datasDisponiveis.map((data, index) => (
+                      <option key={`antes-${data}-${index}`} value={data}>
+                        {formatarDataDDMMYY(new Date(data))}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 text-center">
+                    Data Depois
+                  </label>
+                  <select
+                    value={dataDepois}
+                    onChange={handleDataDepoisChange}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-center"
+                  >
+                    <option value="">Selecione uma data</option>
+                    {datasDisponiveis.map((data, index) => (
+                      <option key={`depois-${data}-${index}`} value={data}>
+                        {formatarDataDDMMYY(new Date(data))}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex justify-center items-center">
+                    <h3 className="text-lg font-semibold text-gray-800 text-center">
+                      {dataAntes && fotoAntes ? formatarDataDDMMYY(fotoAntes.data) : 'Selecione uma data'}
+                    </h3>
+                    {fotoAntes && (
+                      <div className="text-sm font-medium text-gray-600 ml-2">
+                        {fotoAntes.peso} kg
+                      </div>
+                    )}
+                  </div>
+                  <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100">
+                    {fotoAntes && getUrlFoto(fotoAntes, tipoSelecionado) ? (
+                      <img
+                        src={getUrlFoto(fotoAntes, tipoSelecionado) || ''}
+                        alt="Foto antes"
+                        className={`w-full h-full object-cover ${getImageOrientation(tipoSelecionado)}`}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-center">
+                        Nenhuma foto disponível
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-center items-center">
+                    <h3 className="text-lg font-semibold text-gray-800 text-center">
+                      {dataDepois && fotoDepois ? formatarDataDDMMYY(fotoDepois.data) : 'Selecione uma data'}
+                    </h3>
+                    {fotoDepois && (
+                      <div className="text-sm font-medium text-gray-600 ml-2">
+                        {fotoDepois.peso} kg
+                      </div>
+                    )}
+                  </div>
+                  <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100">
+                    {fotoDepois && getUrlFoto(fotoDepois, tipoSelecionado) ? (
+                      <img
+                        src={getUrlFoto(fotoDepois, tipoSelecionado) || ''}
+                        alt="Foto depois"
+                        className={`w-full h-full object-cover ${getImageOrientation(tipoSelecionado)}`}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-center">
+                        Nenhuma foto disponível
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {fotoAntes && fotoDepois && getUrlFoto(fotoAntes, tipoSelecionado) && getUrlFoto(fotoDepois, tipoSelecionado) && (
+                <button
+                  onClick={() => setModoTelaCheia(true)}
+                  className="mt-6 w-full bg-primary-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors duration-300 flex items-center justify-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  </svg>
+                  Comparar em Tela Cheia
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Modal de Tela Cheia */}
@@ -324,10 +354,15 @@ export default function Comparacao() {
           <div className="flex justify-between items-center p-4 bg-black/80 backdrop-blur-sm">
             <div className="flex items-center gap-4">
               <h2 className="text-white font-semibold">
-                {dataAntes ? formatarDataDDMMYY(new Date(dataAntes)) : ''} vs {dataDepois ? formatarDataDDMMYY(new Date(dataDepois)) : ''}
+                {fotoAntes ? formatarDataDDMMYY(fotoAntes.data) : ''} vs {fotoDepois ? formatarDataDDMMYY(fotoDepois.data) : ''}
               </h2>
               <div className="text-white/80 text-sm">
                 {fotoAntes?.peso} kg vs {fotoDepois?.peso} kg
+                {fotoAntes && fotoDepois && (
+                  <span className={`ml-2 ${fotoDepois.peso < fotoAntes.peso ? 'text-green-500' : 'text-red-500'}`}>
+                    ({fotoDepois.peso < fotoAntes.peso ? '-' : '+'}{Math.abs(fotoDepois.peso - fotoAntes.peso).toFixed(1)} kg)
+                  </span>
+                )}
               </div>
             </div>
             <button
@@ -345,7 +380,7 @@ export default function Comparacao() {
               <div className="absolute inset-0 flex flex-col">
                 <div className="flex-1 relative">
                   <img
-                    src={getUrlFoto(fotoAntes, tipoSelecionado) || ''}
+                    src={fotoAntes && getUrlFoto(fotoAntes, tipoSelecionado) || ''}
                     alt="Foto antes"
                     className={`absolute inset-0 w-full h-full object-contain bg-black ${getImageOrientation(tipoSelecionado)}`}
                   />
@@ -355,7 +390,7 @@ export default function Comparacao() {
                 </div>
                 <div className="flex-1 relative">
                   <img
-                    src={getUrlFoto(fotoDepois, tipoSelecionado) || ''}
+                    src={fotoDepois && getUrlFoto(fotoDepois, tipoSelecionado) || ''}
                     alt="Foto depois"
                     className={`absolute inset-0 w-full h-full object-contain bg-black ${getImageOrientation(tipoSelecionado)}`}
                   />
