@@ -292,17 +292,41 @@ export default function TreinoPage() {
                 {exercicio.id && expandedExercicios[exercicio.id] && (
                   historicoExercicios && historicoExercicios[exercicio.id]?.length > 0 ? (
                     <div className="text-sm text-gray-600 space-y-1">
-                      {historicoExercicios[exercicio.id]
-                        .filter((registro: HistoricoRegistro) => registro.tipo === 'work-set')
-                        .sort((a: HistoricoRegistro, b: HistoricoRegistro) => a.ordem - b.ordem)
-                        .map((registro: HistoricoRegistro, index: number) => (
+                      {(() => {
+                        // Agrupar registros por tipo e ordem
+                        const registrosPorTipoEOrdem: { [key: string]: HistoricoRegistro[] } = {};
+                        
+                        historicoExercicios[exercicio.id].forEach((registro: HistoricoRegistro) => {
+                          const chave = `${registro.tipo}-${registro.ordem}`;
+                          if (!registrosPorTipoEOrdem[chave]) {
+                            registrosPorTipoEOrdem[chave] = [];
+                          }
+                          registrosPorTipoEOrdem[chave].push(registro);
+                        });
+                        
+                        // Pegar apenas o registro mais recente de cada grupo
+                        const registrosMaisRecentes: HistoricoRegistro[] = Object.values(registrosPorTipoEOrdem)
+                          .map(registros => 
+                            // Ordenar por data (mais recente primeiro) e pegar o primeiro
+                            registros.sort((a, b) => 
+                              new Date(b.data).getTime() - new Date(a.data).getTime()
+                            )[0]
+                          )
+                          // Filtrar apenas os work-sets
+                          .filter(registro => registro.tipo === 'work-set')
+                          // Ordenar por ordem
+                          .sort((a, b) => a.ordem - b.ordem);
+                        
+                        // Retornar os elementos JSX
+                        return registrosMaisRecentes.map((registro, index) => (
                           <div key={index} className="flex items-center space-x-2">
                             <span className="font-medium">{getTituloSerie(registro.tipo, registro.ordem)}:</span>
                             <span>{registro.peso}kg</span>
                             <span>×</span>
                             <span>{registro.repeticoes} reps</span>
                           </div>
-                        ))}
+                        ));
+                      })()}
                     </div>
                   ) : (
                     <p className="text-sm text-gray-500">Nenhuma série registrada</p>
