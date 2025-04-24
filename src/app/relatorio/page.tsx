@@ -756,45 +756,62 @@ export default function Relatorio() {
           // Nomes descritivos para cada posição de foto
           const nomesFotos = ['Foto de Frente', 'Foto de Costas', 'Foto Lateral Esquerda', 'Foto Lateral Direita'];
           
-          // Calcular dimensões das fotos
-          const numColunas = Math.min(2, fotosProcessadas.length); // Máximo 2 fotos por linha
-          const larguraFoto = ((pageWidth - (margin * 2)) / numColunas) - 5;
-          const alturaFoto = larguraFoto * 1.33; // Proporção aproximada
+          // Calcular tamanho e layout das fotos
+          const espacoDisponivel = pageWidth - (margin * 2);
+          const espacoVertical = pageHeight - margin - yPos - 10;
+          const numFotos = fotosProcessadas.length;
           
-          // Adicionar fotos ao PDF
-          let fotoIndex = 0;
-          while (fotoIndex < fotosProcessadas.length) {
-            // Verificar se precisamos de uma nova página
-            if (yPos + alturaFoto + 20 > pageHeight - margin) {
-              doc.addPage();
-              yPos = margin;
+          // Determinar número de colunas e linhas
+          let numColunas = Math.min(2, numFotos);
+          let numLinhas = Math.ceil(numFotos / numColunas);
+          
+          // Calcular largura máxima disponível por foto
+          const espacoHorizontalPorFoto = (espacoDisponivel / numColunas) - 5;
+          
+          // Calcular altura máxima disponível por foto
+          // Considerando espaço para o texto abaixo da foto (15mm)
+          const alturaMaximaPorFoto = (espacoVertical / numLinhas) - 15;
+          
+          // Adicionar fotos mantendo proporção
+          for (let i = 0; i < fotosProcessadas.length; i++) {
+            const coluna = i % numColunas;
+            const linha = Math.floor(i / numColunas);
+            
+            const xPos = margin + coluna * (espacoHorizontalPorFoto + 5);
+            const yPosImagem = yPos + linha * (alturaMaximaPorFoto + 15);
+            
+            // Criar imagem temporária para obter dimensões originais
+            const img = new Image();
+            img.src = fotosProcessadas[i];
+            
+            // Calcular largura e altura preservando proporção
+            let larguraFoto = espacoHorizontalPorFoto;
+            let alturaFoto = (img.height / img.width) * larguraFoto;
+            
+            // Se a altura calculada for maior que o espaço disponível, ajustar pela altura
+            if (alturaFoto > alturaMaximaPorFoto) {
+              alturaFoto = alturaMaximaPorFoto;
+              larguraFoto = (img.width / img.height) * alturaFoto;
             }
             
-            // Adicionar fotos em linha
-            for (let col = 0; col < numColunas && fotoIndex < fotosProcessadas.length; col++) {
-              const xPos = margin + (col * (larguraFoto + 5));
-              
-              // Adicionar a foto sem moldura
-              doc.addImage(
-                fotosProcessadas[fotoIndex],
-                'JPEG',
-                xPos,
-                yPos,
-                larguraFoto,
-                alturaFoto
-              );
-              
-              // Adicionar nome da foto abaixo da imagem
-              doc.setFontSize(10);
-              doc.setTextColor(60, 60, 60);
-              const nomeFoto = nomesFotos[fotoIndex] || `Foto ${fotoIndex + 1}`;
-              doc.text(nomeFoto, xPos + (larguraFoto / 2), yPos + alturaFoto + 5, { align: 'center' });
-              
-              fotoIndex++;
-            }
+            // Centralizar a imagem no espaço disponível
+            const xCentrado = xPos + (espacoHorizontalPorFoto - larguraFoto) / 2;
             
-            // Avançar para a próxima linha, adicionando espaço para o título
-            yPos += alturaFoto + 20;
+            // Adicionar a foto sem moldura
+            doc.addImage(
+              fotosProcessadas[i],
+              'JPEG',
+              xCentrado,
+              yPosImagem,
+              larguraFoto,
+              alturaFoto
+            );
+            
+            // Adicionar nome da foto abaixo da imagem
+            doc.setFontSize(10);
+            doc.setTextColor(60, 60, 60);
+            const nomeFoto = nomesFotos[i] || `Foto ${i + 1}`;
+            doc.text(nomeFoto, xPos + (espacoHorizontalPorFoto / 2), yPosImagem + alturaFoto + 5, { align: 'center' });
           }
         }
         
