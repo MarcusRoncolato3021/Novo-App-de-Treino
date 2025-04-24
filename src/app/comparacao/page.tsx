@@ -29,8 +29,16 @@ export default function Comparacao() {
         .toArray();
       
       return fotos.map(foto => {
-        const data = new Date(foto.data);
-        return data.toISOString().split('T')[0];
+        // Ajuste para garantir que a data seja representada corretamente
+        const dataOriginal = new Date(foto.data);
+        // Ajustar para meio-dia para evitar problemas de fuso horário
+        const dataAjustada = new Date(
+          dataOriginal.getFullYear(),
+          dataOriginal.getMonth(),
+          dataOriginal.getDate(),
+          12, 0, 0
+        );
+        return dataAjustada.toISOString().split('T')[0];
       });
     }
   ) || [];
@@ -46,14 +54,28 @@ export default function Comparacao() {
 
         // Encontrar as fotos correspondentes às datas selecionadas
         const fotoAntesResult = todasFotos.find(foto => {
-          const dataFoto = new Date(foto.data);
-          const dataStr = dataFoto.toISOString().split('T')[0];
+          const dataOriginal = new Date(foto.data);
+          // Ajustar para meio-dia para evitar problemas de fuso horário
+          const dataAjustada = new Date(
+            dataOriginal.getFullYear(),
+            dataOriginal.getMonth(),
+            dataOriginal.getDate(),
+            12, 0, 0
+          );
+          const dataStr = dataAjustada.toISOString().split('T')[0];
           return dataStr === dataAntes;
         });
 
         const fotoDepoisResult = todasFotos.find(foto => {
-          const dataFoto = new Date(foto.data);
-          const dataStr = dataFoto.toISOString().split('T')[0];
+          const dataOriginal = new Date(foto.data);
+          // Ajustar para meio-dia para evitar problemas de fuso horário
+          const dataAjustada = new Date(
+            dataOriginal.getFullYear(),
+            dataOriginal.getMonth(),
+            dataOriginal.getDate(),
+            12, 0, 0
+          );
+          const dataStr = dataAjustada.toISOString().split('T')[0];
           return dataStr === dataDepois;
         });
 
@@ -128,7 +150,7 @@ export default function Comparacao() {
     }
   };
 
-  function formatarData(data: Date): string {
+  function formatarDataDDMMYY(data: Date): string {
     return data.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
@@ -189,7 +211,7 @@ export default function Comparacao() {
                   <option value="">Selecione uma data</option>
                   {datasDisponiveis.map((data, index) => (
                     <option key={`antes-${data}-${index}`} value={data}>
-                      {formatarData(new Date(data))}
+                      {formatarDataDDMMYY(new Date(data))}
                     </option>
                   ))}
                 </select>
@@ -206,7 +228,7 @@ export default function Comparacao() {
                   <option value="">Selecione uma data</option>
                   {datasDisponiveis.map((data, index) => (
                     <option key={`depois-${data}-${index}`} value={data}>
-                      {formatarData(new Date(data))}
+                      {formatarDataDDMMYY(new Date(data))}
                     </option>
                   ))}
                 </select>
@@ -217,7 +239,7 @@ export default function Comparacao() {
               <div className="space-y-2">
                 <div className="flex justify-center items-center">
                   <h3 className="text-lg font-semibold text-gray-800 text-center">
-                    {dataAntes ? formatarData(new Date(dataAntes)) : 'Selecione uma data'}
+                    {dataAntes ? formatarDataDDMMYY(new Date(dataAntes)) : 'Selecione uma data'}
                   </h3>
                   {fotoAntes && (
                     <div className="text-sm font-medium text-gray-600 ml-2">
@@ -243,7 +265,7 @@ export default function Comparacao() {
               <div className="space-y-2">
                 <div className="flex justify-center items-center">
                   <h3 className="text-lg font-semibold text-gray-800 text-center">
-                    {dataDepois ? formatarData(new Date(dataDepois)) : 'Selecione uma data'}
+                    {dataDepois ? formatarDataDDMMYY(new Date(dataDepois)) : 'Selecione uma data'}
                   </h3>
                   {fotoDepois && (
                     <div className="text-sm font-medium text-gray-600 ml-2">
@@ -288,7 +310,7 @@ export default function Comparacao() {
           <div className="flex justify-between items-center p-4 bg-black/80 backdrop-blur-sm">
             <div className="flex items-center gap-4">
               <h2 className="text-white font-semibold">
-                {dataAntes ? formatarData(new Date(dataAntes)) : ''} vs {dataDepois ? formatarData(new Date(dataDepois)) : ''}
+                {dataAntes ? formatarDataDDMMYY(new Date(dataAntes)) : ''} vs {dataDepois ? formatarDataDDMMYY(new Date(dataDepois)) : ''}
               </h2>
               <div className="text-white/80 text-sm">
                 {fotoAntes?.peso} kg vs {fotoDepois?.peso} kg
