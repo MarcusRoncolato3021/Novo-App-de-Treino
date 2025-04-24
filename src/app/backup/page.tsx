@@ -302,207 +302,166 @@ export default function BackupPage() {
   );
 
   return (
-    <div className="container mx-auto p-4 max-w-3xl pb-24">
-      <header className="mb-6">
-        <div className="flex justify-between items-center">
-          <Link href="/" className="text-gray-600 hover:text-gray-900">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7"></path>
-            </svg>
-          </Link>
-          <h1 className="text-2xl font-bold text-center">Gerenciamento de Backup</h1>
-          <div className="w-6"></div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 pb-24">
+      <style jsx global>{fadeInAnimation}</style>
+      
+      <header className="pt-4 pb-2 px-6 bg-white backdrop-blur-sm shadow-sm">
+        <div className="relative flex items-center justify-center max-w-5xl mx-auto">
+          <div className="absolute left-0 -ml-2">
+            <Link href="/" className="p-2 rounded-full hover:bg-gray-100 transition-all duration-300">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6 text-primary-600">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+              </svg>
+            </Link>
+          </div>
+
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800 -mt-1">
+            Backup e Restauração
+          </h1>
         </div>
       </header>
-      
-      {/* Seção de informações (colapsável) */}
-      <div className="bg-white rounded-lg shadow-md p-5 mb-6">
-        <button 
-          onClick={() => setShowInfoText(!showInfoText)}
-          className="w-full flex justify-between items-center"
-        >
-          <span className="font-medium text-lg text-gray-800">Informações sobre backups</span>
-          <div className="bg-blue-100 rounded-full p-2">
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              width="20" 
-              height="20" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
-              className={`transition-transform duration-300 text-blue-600 ${showInfoText ? 'rotate-180' : ''}`}
-            >
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </div>
-        </button>
-        
-        {showInfoText && (
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-700 space-y-3 animate-fadeIn">
-            <p>Este aplicativo utiliza o armazenamento local do seu navegador para guardar seus dados. 
-            Existem dois tipos principais de backup:</p>
-            
-            <div className="pl-4">
-              <p className="font-medium">1. Backup Manual</p>
-              <p className="pl-3">Recomendado para ser feito regularmente antes de limpar os dados do navegador 
-              ou desinstalar o aplicativo. Inclui todos os seus dados, incluindo fotos.</p>
-              
-              <p className="font-medium mt-2">2. Backup Essencial</p>
-              <p className="pl-3">Uma versão mais leve que não inclui imagens, útil quando o espaço de 
-              armazenamento é limitado.</p>
-            </div>
-            
-            <p className="font-medium">Importante:</p>
-            <ul className="list-disc pl-6">
-              <li>Exporte seus backups regularmente para arquivos externos como medida de segurança.</li>
-              <li>Limite de armazenamento: Alguns navegadores podem limitar o tamanho do backup.</li>
-              <li>Tenha cuidado ao limpar o cache ou os dados do navegador, pois isso pode remover seus dados.</li>
-            </ul>
-          </div>
-        )}
-      </div>
-      
-      {/* Ações de backup em um único card */}
-      <div className="bg-white rounded-lg shadow-md p-5 mb-6">
-        <h2 className="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Ações de Backup</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Coluna de criação */}
-          <div className="space-y-4">
-            <h3 className="font-medium text-gray-700">Criar</h3>
-            <button
-              className={`w-full h-12 rounded-lg font-medium ${
-                isCreatingBackup ? 'bg-gray-300' : 'bg-blue-600 text-white hover:bg-blue-700'
-              } flex justify-center items-center transition-colors`}
-              onClick={handleCreateBackup}
-              disabled={isCreatingBackup}
-            >
-              {isCreatingBackup ? (
-                <>
-                  <LoadingSpinner />
-                  Criando...
-                </>
-              ) : (
-                'Backup Completo'
-              )}
-            </button>
-            
-            <button
-              className={`w-full h-12 rounded-lg font-medium ${
-                isCreatingEssentialBackup ? 'bg-gray-300' : 'bg-green-600 text-white hover:bg-green-700'
-              } flex justify-center items-center transition-colors`}
-              onClick={createEssentialBackup}
-              disabled={isCreatingEssentialBackup}
-            >
-              {isCreatingEssentialBackup ? (
-                <>
-                  <LoadingSpinner />
-                  Criando...
-                </>
-              ) : (
-                'Backup Essencial'
-              )}
-            </button>
-          </div>
 
-          {/* Coluna de exportação */}
-          <div className="space-y-4">
-            <h3 className="font-medium text-gray-700">Exportar</h3>
-            <button
-              className={`w-full h-12 rounded-lg font-medium ${
-                isExportingBackup || backups.length === 0 
-                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed' 
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              } flex justify-center items-center transition-colors`}
-              onClick={handleExportBackup}
-              disabled={isExportingBackup || backups.length === 0}
-            >
-              {isExportingBackup ? (
-                <>
-                  <LoadingSpinner />
-                  Exportando...
-                </>
-              ) : (
-                'Backup Completo'
-              )}
-            </button>
-            
-            <button
-              className={`w-full h-12 rounded-lg font-medium ${
-                isExportingEssentialBackup || backups.length === 0 
-                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed' 
-                  : 'bg-green-600 text-white hover:bg-green-700'
-              } flex justify-center items-center transition-colors`}
-              onClick={handleExportEssentialBackup}
-              disabled={isExportingEssentialBackup || backups.length === 0}
-            >
-              {isExportingEssentialBackup ? (
-                <>
-                  <LoadingSpinner />
-                  Exportando...
-                </>
-              ) : (
-                'Backup Essencial'
-              )}
-            </button>
+      <div className="px-6 py-6 max-w-5xl mx-auto space-y-6">
+        {/* Seção de informações (colapsável) */}
+        <div className="bg-white rounded-lg shadow-md p-5 animate-fadeIn">
+          <h2 className="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Gerenciar Backups</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Coluna de criação */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-gray-700">Criar</h3>
+              <button
+                className={`w-full h-12 rounded-lg font-medium ${
+                  isCreatingBackup ? 'bg-gray-300' : 'bg-blue-600 text-white hover:bg-blue-700'
+                } flex justify-center items-center transition-colors`}
+                onClick={handleCreateBackup}
+                disabled={isCreatingBackup}
+              >
+                {isCreatingBackup ? (
+                  <>
+                    <LoadingSpinner />
+                    Criando...
+                  </>
+                ) : (
+                  'Backup Completo'
+                )}
+              </button>
+              
+              <button
+                className={`w-full h-12 rounded-lg font-medium ${
+                  isCreatingEssentialBackup ? 'bg-gray-300' : 'bg-green-600 text-white hover:bg-green-700'
+                } flex justify-center items-center transition-colors`}
+                onClick={createEssentialBackup}
+                disabled={isCreatingEssentialBackup}
+              >
+                {isCreatingEssentialBackup ? (
+                  <>
+                    <LoadingSpinner />
+                    Criando...
+                  </>
+                ) : (
+                  'Backup Essencial'
+                )}
+              </button>
+            </div>
+
+            {/* Coluna de exportação */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-gray-700">Exportar</h3>
+              <button
+                className={`w-full h-12 rounded-lg font-medium ${
+                  isExportingBackup || backups.length === 0 
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed' 
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                } flex justify-center items-center transition-colors`}
+                onClick={handleExportBackup}
+                disabled={isExportingBackup || backups.length === 0}
+              >
+                {isExportingBackup ? (
+                  <>
+                    <LoadingSpinner />
+                    Exportando...
+                  </>
+                ) : (
+                  'Backup Completo'
+                )}
+              </button>
+              
+              <button
+                className={`w-full h-12 rounded-lg font-medium ${
+                  isExportingEssentialBackup || backups.length === 0 
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed' 
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                } flex justify-center items-center transition-colors`}
+                onClick={handleExportEssentialBackup}
+                disabled={isExportingEssentialBackup || backups.length === 0}
+              >
+                {isExportingEssentialBackup ? (
+                  <>
+                    <LoadingSpinner />
+                    Exportando...
+                  </>
+                ) : (
+                  'Backup Essencial'
+                )}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Lista de backups */}
-      <div className="bg-white rounded-lg shadow-md p-5">
-        <h2 className="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Backups Disponíveis</h2>
-        {backups.length === 0 ? (
-          <p className="text-gray-500 italic text-center py-4">Nenhum backup disponível.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tamanho</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {backups.map((backup, index) => (
-                  <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{backup.date.toLocaleString()}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{backup.size}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex justify-end space-x-3">
-                        <button
-                          className={`px-3 py-1 rounded text-sm font-medium ${
-                            isRestoring ? 'bg-gray-200 text-gray-500' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                          } transition-colors`}
-                          onClick={() => handleRestoreBackup(backup.key)}
-                          disabled={isRestoring}
-                        >
-                          Restaurar
-                        </button>
-                        <button
-                          className={`px-3 py-1 rounded text-sm font-medium ${
-                            isDeleting ? 'bg-gray-200 text-gray-500' : 'bg-red-100 text-red-700 hover:bg-red-200'
-                          } transition-colors`}
-                          onClick={() => handleDeleteBackup(backup.key)}
-                          disabled={isDeleting}
-                        >
-                          Excluir
-                        </button>
-                      </div>
-                    </td>
+        {/* Lista de backups */}
+        <div className="bg-white rounded-lg shadow-md p-5 animate-fadeIn">
+          <h2 className="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Backups Disponíveis</h2>
+          {backups.length === 0 ? (
+            <p className="text-gray-500 italic text-center py-4">Nenhum backup disponível.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tamanho</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {backups.map((backup, index) => (
+                    <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{backup.date.toLocaleString()}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">{backup.size}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <div className="flex justify-end space-x-3">
+                          <button
+                            className={`px-3 py-1 rounded text-sm font-medium ${
+                              isRestoring ? 'bg-gray-200 text-gray-500' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                            } transition-colors`}
+                            onClick={() => handleRestoreBackup(backup.key)}
+                            disabled={isRestoring}
+                          >
+                            Restaurar
+                          </button>
+                          <button
+                            className={`px-3 py-1 rounded text-sm font-medium ${
+                              isDeleting ? 'bg-gray-200 text-gray-500' : 'bg-red-100 text-red-700 hover:bg-red-200'
+                            } transition-colors`}
+                            onClick={() => handleDeleteBackup(backup.key)}
+                            disabled={isDeleting}
+                          >
+                            Excluir
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
       
       {loading && (
