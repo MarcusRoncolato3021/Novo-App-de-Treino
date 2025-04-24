@@ -19,81 +19,95 @@ export default function Comparacao() {
   const [fotoAntes, setFotoAntes] = useState<FotoProgresso | null>(null);
   const [fotoDepois, setFotoDepois] = useState<FotoProgresso | null>(null);
   const [modoTelaCheia, setModoTelaCheia] = useState(false);
+  const [fotosProgresso, setFotosProgresso] = useState<FotoProgresso[]>([]);
+  const [datasDisponiveisFormatadas, setDatasDisponiveisFormatadas] = useState<string[]>([]);
 
-  // Buscar todas as datas disponíveis do histórico de progresso
-  const datasDisponiveis = useLiveQuery(
-    async () => {
-      const fotos = await db.fotosProgresso
+  // Função para normalizar datas e garantir consistência com meio-dia
+  const normalizarData = (data: Date): Date => {
+    return new Date(
+      data.getFullYear(),
+      data.getMonth(),
+      data.getDate(),
+      12, 0, 0
+    );
+  };
+
+  // Função para buscar todos os registros de fotos e normalizar datas
+  const buscarRegistrosFotos = async () => {
+    try {
+      console.log("Buscando registros de fotos...");
+      
+      // Buscar todas as fotos
+      const registros = await db.fotosProgresso
         .orderBy('data')
         .reverse()
         .toArray();
       
-      return fotos.map(foto => {
-        // Ajuste para garantir que a data seja representada corretamente
-        const dataOriginal = new Date(foto.data);
-        // Ajustar para meio-dia para evitar problemas de fuso horário
-        const dataAjustada = new Date(
-          dataOriginal.getFullYear(),
-          dataOriginal.getMonth(),
-          dataOriginal.getDate(),
-          12, 0, 0
-        );
-        return dataAjustada.toISOString().split('T')[0];
+      console.log(`Encontrados ${registros.length} registros de fotos`);
+      
+      // Normalizar as datas de todos os registros
+      const registrosNormalizados = registros.map(registro => {
+        const dataOriginal = new Date(registro.data);
+        
+        // Criar uma cópia do registro com a data normalizada
+        return {
+          ...registro,
+          data: normalizarData(dataOriginal)
+        };
       });
+      
+      // Armazenar os registros normalizados
+      setFotosProgresso(registrosNormalizados);
+      
+      // Extrair apenas as datas formatadas para os selects
+      const datasISOString = registrosNormalizados.map(registro => 
+        registro.data.toISOString().split('T')[0]
+      );
+      
+      setDatasDisponiveisFormatadas(datasISOString);
+      
+      console.log("Registros de fotos carregados com sucesso.");
+    } catch (error) {
+      console.error("Erro ao carregar registros de fotos:", error);
     }
-  ) || [];
+  };
+
+  // Buscar fotos ao carregar o componente
+  useEffect(() => {
+    buscarRegistrosFotos();
+  }, []);
 
   // Buscar fotos quando as datas mudarem
   useEffect(() => {
-    const buscarFotos = async () => {
-      if (dataAntes && dataDepois && dataAntes !== dataDepois) {
-        // Buscar todas as fotos
-        const todasFotos = await db.fotosProgresso
-          .orderBy('data')
-          .toArray();
-
-        // Encontrar as fotos correspondentes às datas selecionadas
-        const fotoAntesResult = todasFotos.find(foto => {
-          const dataOriginal = new Date(foto.data);
-          // Ajustar para meio-dia para evitar problemas de fuso horário
-          const dataAjustada = new Date(
-            dataOriginal.getFullYear(),
-            dataOriginal.getMonth(),
-            dataOriginal.getDate(),
-            12, 0, 0
-          );
-          const dataStr = dataAjustada.toISOString().split('T')[0];
-          return dataStr === dataAntes;
-        });
-
-        const fotoDepoisResult = todasFotos.find(foto => {
-          const dataOriginal = new Date(foto.data);
-          // Ajustar para meio-dia para evitar problemas de fuso horário
-          const dataAjustada = new Date(
-            dataOriginal.getFullYear(),
-            dataOriginal.getMonth(),
-            dataOriginal.getDate(),
-            12, 0, 0
-          );
-          const dataStr = dataAjustada.toISOString().split('T')[0];
-          return dataStr === dataDepois;
-        });
-
-        console.log('Data Antes:', dataAntes);
-        console.log('Foto Antes:', fotoAntesResult);
-        console.log('Data Depois:', dataDepois);
-        console.log('Foto Depois:', fotoDepoisResult);
-
-        setFotoAntes(fotoAntesResult || null);
-        setFotoDepois(fotoDepoisResult || null);
-      } else {
+    const buscarFotosParaComparacao = () => {
+      if (!dataAntes || !dataDepois || dataAntes === dataDepois || fotosProgresso.length === 0) {
         setFotoAntes(null);
         setFotoDepois(null);
+        return;
       }
+      
+      console.log("Buscando fotos para comparação com datas:", dataAntes, dataDepois);
+      
+      // Encontrar fotos correspondentes usando as datas normalizadas
+      const fotoAntesEncontrada = fotosProgresso.find(foto => {
+        const dataISO = foto.data.toISOString().split('T')[0];
+        return dataISO === dataAntes;
+      });
+      
+      const fotoDepoisEncontrada = fotosProgresso.find(foto => {
+        const dataISO = foto.data.toISOString().split('T')[0];
+        return dataISO === dataDepois;
+      });
+      
+      console.log("Foto Antes encontrada:", fotoAntesEncontrada);
+      console.log("Foto Depois encontrada:", fotoDepoisEncontrada);
+      
+      setFotoAntes(fotoAntesEncontrada || null);
+      setFotoDepois(fotoDepoisEncontrada || null);
     };
-
-    buscarFotos();
-  }, [dataAntes, dataDepois]);
+    
+    buscarFotosParaComparacao();
+  }, [dataAntes, dataDepois, fotosProgresso]);
 
   const handleDataAntesChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const novaData = e.target.value;
@@ -209,7 +223,7 @@ export default function Comparacao() {
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-center"
                 >
                   <option value="">Selecione uma data</option>
-                  {datasDisponiveis.map((data, index) => (
+                  {datasDisponiveisFormatadas.map((data, index) => (
                     <option key={`antes-${data}-${index}`} value={data}>
                       {formatarDataDDMMYY(new Date(data))}
                     </option>
@@ -226,7 +240,7 @@ export default function Comparacao() {
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-center"
                 >
                   <option value="">Selecione uma data</option>
-                  {datasDisponiveis.map((data, index) => (
+                  {datasDisponiveisFormatadas.map((data, index) => (
                     <option key={`depois-${data}-${index}`} value={data}>
                       {formatarDataDDMMYY(new Date(data))}
                     </option>
