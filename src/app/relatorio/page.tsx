@@ -1019,45 +1019,36 @@ export default function Relatorio() {
     const carregarDados = async () => {
       try {
         setCarregando(true);
-        const relatorios = await buscarRelatoriosSalvos();
-        if (relatorios.length > 0) {
-          setDadosSalvos(relatorios);
-          setRelatoriosFiltrados(relatorios);
+        
+        // Carregar relatórios salvos
+        const relatoriosSalvos = await buscarRelatoriosSalvos();
+        setRelatoriosFiltrados(relatoriosSalvos);
+        
+        // Verificar se há dados temporários a serem restaurados
+        try {
+          const dadosTemp = localStorage.getItem('relatorio_temp');
+          if (dadosTemp) {
+            const dados = JSON.parse(dadosTemp);
+            setDietaSemanal(dados.dietaSemanal || '');
+            setComentarioTreino(dados.comentarioTreino || '');
+            setCalorias(dados.calorias || '');
+            setPeso(dados.peso || '');
+            if (dados.dataSelecionada) {
+              setDataSelecionada(new Date(dados.dataSelecionada));
+            }
+          }
+        } catch (error) {
+          console.error('Erro ao recuperar dados temporários:', error);
         }
       } catch (error) {
-        console.error('Erro ao carregar relatórios:', error);
+        console.error('Erro ao carregar dados:', error);
+        toast.error('Erro ao carregar dados. Tente novamente.');
       } finally {
         setCarregando(false);
       }
     };
     
     carregarDados();
-    
-    // Recuperar dados do formulário do localStorage
-    try {
-      const dadosTemp = localStorage.getItem('relatorio_temp');
-      if (dadosTemp) {
-        try {
-          const dados = JSON.parse(dadosTemp);
-          if (dados.dietaSemanal) setDietaSemanal(dados.dietaSemanal);
-          if (dados.comentarioTreino) setComentarioTreino(dados.comentarioTreino);
-          if (dados.calorias) setCalorias(dados.calorias);
-          if (dados.peso) setPeso(dados.peso);
-          if (dados.dataSelecionada) {
-            try {
-              setDataSelecionada(new Date(dados.dataSelecionada));
-            } catch (dateError) {
-              console.error('Erro ao converter a data:', dateError);
-              setDataSelecionada(new Date());
-            }
-          }
-        } catch (parseError) {
-          console.error('Erro ao processar dados temporários:', parseError);
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao recuperar dados de formulário:', error);
-    }
     
     // Processar fotos separadamente para evitar sobrecarga
     const processarFotos = async () => {
@@ -1093,24 +1084,23 @@ export default function Relatorio() {
             console.error("Erro ao processar ID:", error);
             localStorage.removeItem('fotos_relatorio_id');
           }
-        } else {
-          // Abordagem antiga - localStorage
-          try {
-            const fotosSalvas = localStorage.getItem('fotos_relatorio');
-            if (fotosSalvas) {
-              try {
-                const fotosArray = JSON.parse(fotosSalvas);
-                if (Array.isArray(fotosArray)) {
-                  // Usar todas as fotos
-                  setFotosSelecionadas(fotosArray);
-                }
-              } catch (parseError) {
-                console.error('Erro ao processar fotos:', parseError);
+        }
+        // Abordagem antiga - localStorage
+        try {
+          const fotosSalvas = localStorage.getItem('fotos_relatorio');
+          if (fotosSalvas) {
+            try {
+              const fotosArray = JSON.parse(fotosSalvas);
+              if (Array.isArray(fotosArray)) {
+                // Usar todas as fotos
+                setFotosSelecionadas(fotosArray);
               }
+            } catch (parseError) {
+              console.error('Erro ao processar fotos:', parseError);
             }
-          } catch (fotosError) {
-            console.error('Erro ao carregar fotos:', fotosError);
           }
+        } catch (fotosError) {
+          console.error('Erro ao carregar fotos:', fotosError);
         }
       } catch (mainError) {
         console.error("Erro principal no processamento de fotos:", mainError);
@@ -1125,6 +1115,111 @@ export default function Relatorio() {
     // Limpar timeout se o componente for desmontado
     return () => clearTimeout(timeoutId);
   }, []);
+
+  // Efeito para verificar o histórico de fotos quando a tela de comparação é exibida
+  useEffect(() => {
+    if (activeTab === 'comparar') {
+      buscarHistoricoFotos();
+    }
+  }, [activeTab]);
+
+  // Função para buscar o histórico de fotos e atualizar os relatórios
+  const buscarHistoricoFotos = async () => {
+    try {
+      // Buscar todos os registros de fotos de progresso
+      const fotosProgresso = await db.fotosProgresso
+        .orderBy('data')
+        .reverse()
+        .toArray();
+      
+      if (fotosProgresso.length === 0) {
+        return; // Não há fotos para processar
+      }
+      
+      // Verificar se os relatórios atuais têm fotos
+      const relatoriosAtualizados = dadosSalvos.map(relatorio => {
+        // Se já tem fotos, manter como está
+        if (relatorio.fotos && relatorio.fotos.length > 0) {
+          return relatorio;
+        }
+        
+        // Buscar o registro de fotos mais próximo da data do relatório
+        const dataRelatorio = new Date(relatorio.data).getTime();
+        let registroMaisProximo = null;
+        let menorDiferenca = Infinity;
+        
+        for (const registro of fotosProgresso) {
+          const dataRegistro = new Date(registro.data).getTime();
+          const diferenca = Math.abs(dataRegistro - dataRelatorio);
+          
+          if (diferenca < menorDiferenca) {
+            menorDiferenca = diferenca;
+            registroMaisProximo = registro;
+          }
+        }
+        
+        // Se encontrou registro próximo, adicionar as fotos ao relatório
+        if (registroMaisProximo) {
+          const fotos: string[] = [];
+          if (registroMaisProximo.frente) fotos.push(registroMaisProximo.frente);
+          if (registroMaisProximo.costas) fotos.push(registroMaisProximo.costas);
+          if (registroMaisProximo.lateralEsquerda) fotos.push(registroMaisProximo.lateralEsquerda);
+          if (registroMaisProximo.lateralDireita) fotos.push(registroMaisProximo.lateralDireita);
+          
+          return {
+            ...relatorio,
+            fotos
+          };
+        }
+        
+        return relatorio;
+      });
+      
+      // Verificar se existem registros de fotos sem relatórios correspondentes
+      const datasRelatorios = new Set(relatoriosAtualizados.map(r => new Date(r.data).toDateString()));
+      const novosRelatorios = fotosProgresso
+        .filter(registro => !datasRelatorios.has(new Date(registro.data).toDateString()))
+        .map(registro => {
+          // Coletar todas as fotos disponíveis do registro
+          const fotos: string[] = [];
+          if (registro.frente) fotos.push(registro.frente);
+          if (registro.costas) fotos.push(registro.costas);
+          if (registro.lateralEsquerda) fotos.push(registro.lateralEsquerda);
+          if (registro.lateralDireita) fotos.push(registro.lateralDireita);
+          
+          // Criar um relatório básico a partir do registro de fotos
+          return {
+            id: Date.now() + Math.floor(Math.random() * 1000),
+            data: new Date(registro.data),
+            peso: registro.peso || 0,
+            calorias: 0,
+            dietaSemanal: 'Sem informações de dieta',
+            comentarioTreino: '',
+            comentarios: '',
+            fotos
+          };
+        });
+      
+      // Juntar os relatórios existentes com os novos e ordenar por data
+      if (novosRelatorios.length > 0) {
+        const todosRelatorios = [...relatoriosAtualizados, ...novosRelatorios]
+          .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+        
+        setDadosSalvos(todosRelatorios);
+        setRelatoriosFiltrados(todosRelatorios);
+        
+        console.log(`Adicionados ${novosRelatorios.length} relatórios baseados em registros de fotos`);
+      } else if (JSON.stringify(relatoriosAtualizados) !== JSON.stringify(dadosSalvos)) {
+        // Atualizar apenas se houve mudanças
+        setDadosSalvos(relatoriosAtualizados);
+        setRelatoriosFiltrados(relatoriosAtualizados);
+        
+        console.log('Relatórios atualizados com fotos do histórico');
+      }
+    } catch (error) {
+      console.error('Erro ao buscar histórico de fotos:', error);
+    }
+  };
 
   // Efeito para filtrar relatórios quando o termo de pesquisa mudar
   useEffect(() => {
@@ -1948,4 +2043,4 @@ export default function Relatorio() {
       </nav>
     </div>
   );
-} 
+}
