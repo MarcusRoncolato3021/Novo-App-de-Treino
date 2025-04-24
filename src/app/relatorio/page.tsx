@@ -995,10 +995,18 @@ export default function Relatorio() {
         console.error('Erro ao salvar dados temporários:', error);
       }
       
+      // Ajustar a data para meio-dia para evitar problemas de fuso horário
+      const dataAjustada = new Date(
+        dataSelecionada.getFullYear(),
+        dataSelecionada.getMonth(),
+        dataSelecionada.getDate(),
+        12, 0, 0
+      );
+      
       // Criar o objeto do relatório
       const relatorio: RelatorioSemanal = {
         id: registroEditando || Date.now(),
-        data: new Date(dataSelecionada),
+        data: dataAjustada,
         dietaSemanal,
         comentarioTreino: comentarioTreino || '',
         calorias: Number(calorias) || 0,
@@ -1036,7 +1044,7 @@ export default function Relatorio() {
       
     } catch (error) {
       console.error('Erro ao salvar relatório:', error);
-      toast.error('Erro ao salvar relatório. Por favor, tente novamente.');
+      toast.error('Erro ao salvar relatório. Tente novamente.');
     } finally {
       setCarregando(false);
     }
@@ -1147,6 +1155,7 @@ export default function Relatorio() {
   // Efeito para verificar o histórico de fotos quando a tela de comparação é exibida
   useEffect(() => {
     if (activeTab === 'comparar') {
+      console.log("Tela de comparação ativada, buscando histórico de fotos...");
       buscarHistoricoFotos();
     }
   }, [activeTab]);
@@ -1160,25 +1169,72 @@ export default function Relatorio() {
         .reverse()
         .toArray();
       
+      console.log("Registros de fotos encontrados:", fotosProgresso.length);
+      if (fotosProgresso.length > 0) {
+        console.log("Exemplo de data do primeiro registro:", 
+          new Date(fotosProgresso[0].data).toISOString(),
+          "formatada:", formatarDataDDMMYY(new Date(fotosProgresso[0].data))
+        );
+      }
+      
       if (fotosProgresso.length === 0) {
         return; // Não há fotos para processar
       }
       
+      // Resolver problema de fuso horário para todos os registros de fotos 
+      const fotosProgressoAjustadas = fotosProgresso.map(registro => {
+        const dataOriginal = new Date(registro.data);
+        // Criar nova data às 12:00 para evitar problemas de fuso
+        const dataCorrigida = new Date(
+          dataOriginal.getFullYear(),
+          dataOriginal.getMonth(),
+          dataOriginal.getDate(),
+          12, 0, 0
+        );
+        
+        return {
+          ...registro,
+          data: dataCorrigida,
+          dataOriginal: dataOriginal // Manter a original para debug
+        };
+      });
+      
+      console.log("Datas ajustadas para registros de fotos");
+      if (fotosProgressoAjustadas.length > 0) {
+        console.log("Exemplo após ajuste:", 
+          fotosProgressoAjustadas[0].data.toISOString(),
+          "formatada:", formatarDataDDMMYY(fotosProgressoAjustadas[0].data),
+          "data original:", fotosProgressoAjustadas[0].dataOriginal.toISOString()
+        );
+      }
+      
       // Verificar se os relatórios atuais têm fotos
       const relatoriosAtualizados = dadosSalvos.map(relatorio => {
-        // Se já tem fotos, manter como está
+        // Primeiro ajustar a data do relatório para garantir consistência
+        const dataRelatorioOriginal = new Date(relatorio.data);
+        const dataRelatorioAjustada = new Date(
+          dataRelatorioOriginal.getFullYear(),
+          dataRelatorioOriginal.getMonth(),
+          dataRelatorioOriginal.getDate(),
+          12, 0, 0
+        );
+        
+        // Se já tem fotos, apenas atualizar a data
         if (relatorio.fotos && relatorio.fotos.length > 0) {
-          return relatorio;
+          return {
+            ...relatorio,
+            data: dataRelatorioAjustada
+          };
         }
         
         // Buscar o registro de fotos mais próximo da data do relatório
-        const dataRelatorio = new Date(relatorio.data).getTime();
+        const dataRelatorioTime = dataRelatorioAjustada.getTime();
         let registroMaisProximo = null;
         let menorDiferenca = Infinity;
         
-        for (const registro of fotosProgresso) {
-          const dataRegistro = new Date(registro.data).getTime();
-          const diferenca = Math.abs(dataRegistro - dataRelatorio);
+        for (const registro of fotosProgressoAjustadas) {
+          const dataRegistroTime = registro.data.getTime();
+          const diferenca = Math.abs(dataRegistroTime - dataRelatorioTime);
           
           if (diferenca < menorDiferenca) {
             menorDiferenca = diferenca;
@@ -1196,17 +1252,35 @@ export default function Relatorio() {
           
           return {
             ...relatorio,
+            data: dataRelatorioAjustada,
             fotos
           };
         }
         
-        return relatorio;
+        return {
+          ...relatorio,
+          data: dataRelatorioAjustada
+        };
       });
       
       // Verificar se existem registros de fotos sem relatórios correspondentes
-      const datasRelatorios = new Set(relatoriosAtualizados.map(r => new Date(r.data).toDateString()));
-      const novosRelatorios = fotosProgresso
-        .filter(registro => !datasRelatorios.has(new Date(registro.data).toDateString()))
+      // Usar o método toDateString() é mais seguro para comparação de dias
+      const datasRelatorios = new Set(
+        relatoriosAtualizados.map(r => 
+          `${r.data.getFullYear()}-${r.data.getMonth()}-${r.data.getDate()}`
+        )
+      );
+      
+      // Ver quais registros não têm correspondente
+      const novosRelatorios = fotosProgressoAjustadas
+        .filter(registro => {
+          const dataKey = `${registro.data.getFullYear()}-${registro.data.getMonth()}-${registro.data.getDate()}`;
+          const existe = datasRelatorios.has(dataKey);
+          if (!existe) {
+            console.log(`Nova data de foto encontrada: ${formatarDataDDMMYY(registro.data)}`);
+          }
+          return !existe;
+        })
         .map(registro => {
           // Coletar todas as fotos disponíveis do registro
           const fotos: string[] = [];
@@ -1215,24 +1289,13 @@ export default function Relatorio() {
           if (registro.lateralEsquerda) fotos.push(registro.lateralEsquerda);
           if (registro.lateralDireita) fotos.push(registro.lateralDireita);
           
-          // Ajustar a data para garantir que não haja problemas de fuso horário
-          // Pegar a data original e criar uma data com horário zerado para evitar problemas de fuso
-          const dataOriginal = new Date(registro.data);
-          const dataAjustada = new Date(
-            dataOriginal.getFullYear(),
-            dataOriginal.getMonth(),
-            dataOriginal.getDate(),
-            12, 0, 0 // Meio-dia para evitar problemas de fuso horário
-          );
-          
-          console.log(`Data original: ${dataOriginal.toISOString()}`);
-          console.log(`Data ajustada: ${dataAjustada.toISOString()}`);
-          console.log(`Data formatada: ${formatarDataDDMMYY(dataAjustada)}`);
+          // Usar a data já ajustada
+          console.log(`Novo relatório criado para data: ${formatarDataDDMMYY(registro.data)}`);
           
           // Criar um relatório básico a partir do registro de fotos
           return {
             id: Date.now() + Math.floor(Math.random() * 1000),
-            data: dataAjustada,
+            data: registro.data, // Já está ajustada para meio-dia
             peso: registro.peso || 0,
             calorias: 0,
             dietaSemanal: 'Sem informações de dieta',
@@ -1245,18 +1308,20 @@ export default function Relatorio() {
       // Juntar os relatórios existentes com os novos e ordenar por data
       if (novosRelatorios.length > 0) {
         const todosRelatorios = [...relatoriosAtualizados, ...novosRelatorios]
-          .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+          .sort((a, b) => b.data.getTime() - a.data.getTime());
+        
+        console.log(`Adicionados ${novosRelatorios.length} relatórios baseados em registros de fotos`);
+        console.log("Todos os relatórios após junção:", todosRelatorios.map(r => 
+          `${formatarDataDDMMYY(r.data)} (${r.data.toISOString()})`).join(", ")
+        );
         
         setDadosSalvos(todosRelatorios);
         setRelatoriosFiltrados(todosRelatorios);
-        
-        console.log(`Adicionados ${novosRelatorios.length} relatórios baseados em registros de fotos`);
       } else if (JSON.stringify(relatoriosAtualizados) !== JSON.stringify(dadosSalvos)) {
         // Atualizar apenas se houve mudanças
+        console.log("Atualizados os relatórios existentes com datas corrigidas");
         setDadosSalvos(relatoriosAtualizados);
         setRelatoriosFiltrados(relatoriosAtualizados);
-        
-        console.log('Relatórios atualizados com fotos do histórico');
       }
     } catch (error) {
       console.error('Erro ao buscar histórico de fotos:', error);
