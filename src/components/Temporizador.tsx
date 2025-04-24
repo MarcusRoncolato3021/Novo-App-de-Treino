@@ -44,6 +44,10 @@ export default function Temporizador({ tempoTotal, onComplete }: TemporizadorPro
     setIsAtivo(false);
   };
 
+  const adicionarTempo = () => {
+    setTempoRestante(tempo => tempo + 30);
+  };
+
   const formatarTempo = (segundos: number) => {
     const minutos = Math.floor(segundos / 60);
     const segundosRestantes = segundos % 60;
@@ -72,6 +76,13 @@ export default function Temporizador({ tempoTotal, onComplete }: TemporizadorPro
             Pausar
           </button>
         )}
+        
+        <button
+          onClick={adicionarTempo}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          +30s
+        </button>
         
         <button
           onClick={reiniciar}
